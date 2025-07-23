@@ -35,8 +35,8 @@ const StampCalendar = ({ submissions = [] }: StampCalendarProps) => {
 
   const { days, firstDay, lastDay } = getMonthData(currentDate);
 
-  const getSubmissionForDate = (date: Date) => {
-    return submissions.find(sub => 
+  const getSubmissionsForDate = (date: Date) => {
+    return submissions.filter(sub => 
       sub.date.toDateString() === date.toDateString()
     );
   };
@@ -44,11 +44,11 @@ const StampCalendar = ({ submissions = [] }: StampCalendarProps) => {
   const getStampIcon = (type: "diary" | "book-report" | "free-task") => {
     switch (type) {
       case "diary":
-        return <PenTool className="h-4 w-4 text-primary" />;
+        return <PenTool className="h-3 w-3 text-primary" />;
       case "book-report":
-        return <BookOpen className="h-4 w-4 text-accent" />;
+        return <BookOpen className="h-3 w-3 text-accent" />;
       case "free-task":
-        return <Star className="h-4 w-4 text-success" />;
+        return <Star className="h-3 w-3 text-success" />;
       default:
         return null;
     }
@@ -57,11 +57,11 @@ const StampCalendar = ({ submissions = [] }: StampCalendarProps) => {
   const getStampBackground = (type: "diary" | "book-report" | "free-task") => {
     switch (type) {
       case "diary":
-        return "bg-primary/20 border-primary/40";
+        return "bg-primary/10 border-primary/30";
       case "book-report":
-        return "bg-accent/20 border-accent/40";
+        return "bg-accent/10 border-accent/30";
       case "free-task":
-        return "bg-success/20 border-success/40";
+        return "bg-success/10 border-success/30";
       default:
         return "";
     }
@@ -138,7 +138,7 @@ const StampCalendar = ({ submissions = [] }: StampCalendarProps) => {
         {/* 날짜 그리드 */}
         <div className="grid grid-cols-7 gap-1">
           {days.map((day, index) => {
-            const submission = getSubmissionForDate(day);
+            const daySubmissions = getSubmissionsForDate(day);
             const isCurrentMonthDay = isCurrentMonth(day);
             const isTodayDate = isToday(day);
             
@@ -146,27 +146,39 @@ const StampCalendar = ({ submissions = [] }: StampCalendarProps) => {
               <div
                 key={index}
                 className={cn(
-                  "relative aspect-square flex items-center justify-center text-sm border rounded-md transition-colors",
+                  "relative h-16 border rounded-md transition-colors p-1",
                   !isCurrentMonthDay && "text-muted-foreground/40 bg-muted/20",
-                  isTodayDate && "bg-primary/10 border-primary font-semibold",
-                  submission && getStampBackground(submission.type)
+                  isTodayDate && "bg-primary/10 border-primary",
+                  isCurrentMonthDay && !isTodayDate && "bg-card hover:bg-muted/30"
                 )}
               >
-                <span className={cn(
-                  isCurrentMonthDay ? "text-foreground" : "text-muted-foreground/40",
-                  isTodayDate && "text-primary"
-                )}>
-                  {day.getDate()}
-                </span>
+                {/* 날짜 숫자 - 왼쪽 위 */}
+                <div className="absolute top-1 left-1">
+                  <span className={cn(
+                    "text-xs font-medium",
+                    isCurrentMonthDay ? "text-foreground" : "text-muted-foreground/40",
+                    isTodayDate && "text-primary font-semibold"
+                  )}>
+                    {day.getDate()}
+                  </span>
+                </div>
                 
-                {/* 스탬프 */}
-                {submission && (
-                  <div className="absolute top-0.5 right-0.5">
-                    <div className={cn(
-                      "w-5 h-5 rounded-full border-2 flex items-center justify-center",
-                      getStampBackground(submission.type)
-                    )}>
-                      {getStampIcon(submission.type)}
+                {/* 스탬프들 - 가운데부터 배치 */}
+                {daySubmissions.length > 0 && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="flex gap-0.5 flex-wrap justify-center max-w-full">
+                      {daySubmissions.map((submission, subIndex) => (
+                        <div
+                          key={subIndex}
+                          className={cn(
+                            "w-4 h-4 rounded-full border flex items-center justify-center",
+                            getStampBackground(submission.type)
+                          )}
+                          title={`${submission.type === 'diary' ? '일기' : submission.type === 'book-report' ? '독후감' : '자유과제'}`}
+                        >
+                          {getStampIcon(submission.type)}
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}

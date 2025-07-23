@@ -39,7 +39,12 @@ const Index = () => {
                 { date: new Date(2025, 6, 30), type: "book-report" },
                 { date: new Date(2025, 7, 2), type: "free-task" },
                 { date: new Date(2025, 7, 5), type: "diary" },
+                { date: new Date(2025, 7, 5), type: "book-report" }, // 같은 날 여러 과제
                 { date: new Date(2025, 7, 8), type: "book-report" },
+                { date: new Date(2025, 7, 10), type: "diary" },
+                { date: new Date(2025, 7, 10), type: "free-task" }, // 같은 날 여러 과제
+                { date: new Date(2025, 7, 10), type: "book-report" }, // 같은 날 3개 과제
+                { date: new Date(2025, 7, 15), type: "free-task" },
               ]}
             />
           </div>
