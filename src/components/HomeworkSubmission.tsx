@@ -1,0 +1,183 @@
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { BookOpen, PenTool, Star, Plus } from "lucide-react";
+
+interface Homework {
+  id: string;
+  type: "diary" | "book-report" | "free-task";
+  title: string;
+  content: string;
+  submittedAt: Date;
+  points: number;
+}
+
+const HomeworkSubmission = () => {
+  const [homeworks, setHomeworks] = useState<Homework[]>([]);
+  const [activeTab, setActiveTab] = useState<"diary" | "book-report" | "free-task">("diary");
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const { toast } = useToast();
+
+  const homeworkTypes = {
+    diary: { icon: PenTool, label: "일기 쓰기", points: 10, color: "bg-primary", minRequired: 3 },
+    "book-report": { icon: BookOpen, label: "독후감 쓰기", points: 15, color: "bg-accent", minRequired: 3 },
+    "free-task": { icon: Star, label: "자유 과제", points: 20, color: "bg-success", minRequired: 0 }
+  };
+
+  const submitHomework = () => {
+    if (!title.trim() || !content.trim()) {
+      toast({
+        title: "오류",
+        description: "제목과 내용을 모두 입력해주세요.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const newHomework: Homework = {
+      id: Date.now().toString(),
+      type: activeTab,
+      title: title.trim(),
+      content: content.trim(),
+      submittedAt: new Date(),
+      points: homeworkTypes[activeTab].points
+    };
+
+    setHomeworks([...homeworks, newHomework]);
+    setTitle("");
+    setContent("");
+
+    toast({
+      title: "과제 제출 완료!",
+      description: `${homeworkTypes[activeTab].points}포인트를 획득했습니다!`,
+      variant: "default"
+    });
+  };
+
+  const getSubmissionCount = (type: string) => {
+    return homeworks.filter(hw => hw.type === type).length;
+  };
+
+  const getTotalPoints = () => {
+    return homeworks.reduce((total, hw) => total + hw.points, 0);
+  };
+
+  const getProgress = (type: "diary" | "book-report" | "free-task") => {
+    const count = getSubmissionCount(type);
+    const required = homeworkTypes[type].minRequired;
+    if (required === 0) return 100; // 자유과제는 제한 없음
+    return Math.min((count / required) * 100, 100);
+  };
+
+  return (
+    <div className="grid lg:grid-cols-3 gap-6">
+      {/* 과제 제출 폼 */}
+      <div className="lg:col-span-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Plus className="h-5 w-5" />
+              방학 과제 제출하기
+            </CardTitle>
+            <div className="flex gap-2">
+              {Object.entries(homeworkTypes).map(([key, type]) => {
+                const Icon = type.icon;
+                return (
+                  <Button
+                    key={key}
+                    variant={activeTab === key ? "default" : "outline"}
+                    onClick={() => setActiveTab(key as any)}
+                    className="flex items-center gap-2"
+                  >
+                    <Icon className="h-4 w-4" />
+                    {type.label}
+                    <Badge variant="secondary" className="ml-1">
+                      {type.points}pt
+                    </Badge>
+                  </Button>
+                );
+              })}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">제목</label>
+              <Input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder={`${homeworkTypes[activeTab].label} 제목을 입력하세요`}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">내용</label>
+              <Textarea
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder={`${homeworkTypes[activeTab].label} 내용을 입력하세요`}
+                rows={6}
+              />
+            </div>
+            <Button onClick={submitHomework} className="w-full">
+              과제 제출하기 (+{homeworkTypes[activeTab].points} 포인트)
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* 진행상황 */}
+      <div className="space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-center">내 포인트</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center">
+              <div className="text-3xl font-bold text-primary">{getTotalPoints()}</div>
+              <div className="text-sm text-muted-foreground">총 포인트</div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>진행 상황</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {Object.entries(homeworkTypes).map(([key, type]) => {
+              const Icon = type.icon;
+              const count = getSubmissionCount(key);
+              const progress = getProgress(key as any);
+              
+              return (
+                <div key={key} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Icon className="h-4 w-4" />
+                      <span className="text-sm font-medium">{type.label}</span>
+                    </div>
+                    <span className="text-sm text-muted-foreground">
+                      {type.minRequired > 0 ? `${count}/${type.minRequired}` : count}
+                    </span>
+                  </div>
+                  <div className="w-full bg-muted rounded-full h-2">
+                    <div
+                      className={`h-2 rounded-full transition-all duration-300 ${type.color}`}
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+export default HomeworkSubmission;
