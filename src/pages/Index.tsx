@@ -1,6 +1,7 @@
 import VacationInfo from "@/components/VacationInfo";
 import HomeworkSubmission from "@/components/HomeworkSubmission";
 import RankingBoard from "@/components/RankingBoard";
+import StampCalendar from "@/components/StampCalendar";
 import { BookOpen, Users, Target } from "lucide-react";
 
 const Index = () => {
@@ -27,8 +28,20 @@ const Index = () => {
         {/* Content Grid */}
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Homework Submission - Takes 2 columns */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 space-y-8">
             <HomeworkSubmission />
+            
+            {/* Stamp Calendar */}
+            <StampCalendar 
+              submissions={[
+                // 예시 데이터 - 실제로는 상태에서 관리될 것
+                { date: new Date(2025, 6, 28), type: "diary" },
+                { date: new Date(2025, 6, 30), type: "book-report" },
+                { date: new Date(2025, 7, 2), type: "free-task" },
+                { date: new Date(2025, 7, 5), type: "diary" },
+                { date: new Date(2025, 7, 8), type: "book-report" },
+              ]}
+            />
           </div>
           
           {/* Ranking Board - Takes 1 column */}

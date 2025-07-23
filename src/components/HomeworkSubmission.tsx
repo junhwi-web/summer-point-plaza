@@ -6,12 +6,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { BookOpen, PenTool, Star, Plus } from "lucide-react";
+import PhotoUpload from "./PhotoUpload";
 
 interface Homework {
   id: string;
   type: "diary" | "book-report" | "free-task";
   title: string;
   content: string;
+  photo?: string;
   submittedAt: Date;
   points: number;
 }
@@ -21,6 +23,7 @@ const HomeworkSubmission = () => {
   const [activeTab, setActiveTab] = useState<"diary" | "book-report" | "free-task">("diary");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [photo, setPhoto] = useState("");
   const { toast } = useToast();
 
   const homeworkTypes = {
@@ -44,6 +47,7 @@ const HomeworkSubmission = () => {
       type: activeTab,
       title: title.trim(),
       content: content.trim(),
+      photo: photo,
       submittedAt: new Date(),
       points: homeworkTypes[activeTab].points
     };
@@ -51,6 +55,7 @@ const HomeworkSubmission = () => {
     setHomeworks([...homeworks, newHomework]);
     setTitle("");
     setContent("");
+    setPhoto("");
 
     toast({
       title: "과제 제출 완료!",
@@ -122,6 +127,16 @@ const HomeworkSubmission = () => {
                 rows={6}
               />
             </div>
+            
+            {/* 사진 업로드 */}
+            <div>
+              <label className="text-sm font-medium mb-2 block">과제 사진</label>
+              <PhotoUpload 
+                onPhotoCapture={setPhoto}
+                capturedPhoto={photo}
+              />
+            </div>
+            
             <Button onClick={submitHomework} className="w-full">
               과제 제출하기 (+{homeworkTypes[activeTab].points} 포인트)
             </Button>
