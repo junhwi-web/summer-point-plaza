@@ -43,25 +43,34 @@ export type Database = {
       }
       homework_submissions: {
         Row: {
+          content: string | null
           homework_type: string
           id: string
+          photo: string | null
           points: number
           student_id: string
           submitted_at: string
+          title: string | null
         }
         Insert: {
+          content?: string | null
           homework_type: string
           id?: string
+          photo?: string | null
           points?: number
           student_id: string
           submitted_at?: string
+          title?: string | null
         }
         Update: {
+          content?: string | null
           homework_type?: string
           id?: string
+          photo?: string | null
           points?: number
           student_id?: string
           submitted_at?: string
+          title?: string | null
         }
         Relationships: [
           {

@@ -143,7 +143,10 @@ const HomeworkSubmission = ({ student, onSubmissionUpdate }: HomeworkSubmissionP
         .insert({
           student_id: student.id,
           homework_type: activeTab,
-          points: homeworkTypes[activeTab].points
+          points: homeworkTypes[activeTab].points,
+          title: title.trim(),
+          content: content.trim(),
+          photo: photo
         })
         .select()
         .single();

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import VacationInfo from "@/components/VacationInfo";
 import HomeworkSubmission from "@/components/HomeworkSubmission";
+import HomeworkList from "@/components/HomeworkList";
 import RankingBoard from "@/components/RankingBoard";
 import StampCalendar from "@/components/StampCalendar";
 import AdminDashboard from "@/components/AdminDashboard";
@@ -256,6 +257,15 @@ const Index = () => {
                     // Trigger re-fetch of data in other components
                     window.location.reload(); // Simple solution for now
                   }} 
+                />
+                
+                {/* Homework List */}
+                <HomeworkList 
+                  student={student}
+                  onUpdate={() => {
+                    // Trigger re-fetch of data in other components
+                    window.location.reload(); // Simple solution for now
+                  }}
                 />
                 
                 {/* Stamp Calendar */}
