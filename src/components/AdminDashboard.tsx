@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, BookOpen, Trophy, Plus, ArrowLeft } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Users, BookOpen, Trophy, Plus, ArrowLeft, Edit3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import StudentManagement from "./StudentManagement";
@@ -19,6 +21,9 @@ type ManagementView = 'dashboard' | 'students' | 'homework' | 'ranking' | 'notic
 const AdminDashboard = ({ classroom, onGenerateNewCode }: AdminDashboardProps) => {
   const { toast } = useToast();
   const [currentView, setCurrentView] = useState<ManagementView>('dashboard');
+  const [customCode, setCustomCode] = useState("");
+  const [isCodeDialogOpen, setIsCodeDialogOpen] = useState(false);
+  const [isUpdatingCode, setIsUpdatingCode] = useState(false);
   const [stats, setStats] = useState({
     studentCount: 0,
     homeworkCount: 0,
@@ -81,6 +86,83 @@ const AdminDashboard = ({ classroom, onGenerateNewCode }: AdminDashboardProps) =
     });
   };
 
+  const handleUpdateCode = async () => {
+    if (!customCode.trim()) {
+      toast({
+        title: "오류",
+        description: "학급 코드를 입력해주세요.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (customCode.length !== 5) {
+      toast({
+        title: "오류", 
+        description: "학급 코드는 5자리여야 합니다.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!/^[A-Z]+$/.test(customCode)) {
+      toast({
+        title: "오류",
+        description: "학급 코드는 영문 대문자만 입력 가능합니다.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsUpdatingCode(true);
+
+    try {
+      // Check if code already exists
+      const { data: existingClassroom } = await supabase
+        .from('classrooms')
+        .select('id')
+        .eq('code', customCode.toUpperCase())
+        .neq('id', classroom.id)
+        .maybeSingle();
+
+      if (existingClassroom) {
+        toast({
+          title: "오류",
+          description: "이미 사용 중인 학급 코드입니다.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Update the code
+      const { error } = await supabase
+        .from('classrooms')
+        .update({ code: customCode.toUpperCase() })
+        .eq('id', classroom.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "학급 코드 변경 완료",
+        description: `새 학급 코드: ${customCode.toUpperCase()}`,
+      });
+
+      setIsCodeDialogOpen(false);
+      setCustomCode("");
+      
+      // Update parent component
+      window.location.reload(); // Simple solution for now
+    } catch (error: any) {
+      toast({
+        title: "오류 발생",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setIsUpdatingCode(false);
+    }
+  };
+
   // Render specific management view
   if (currentView !== 'dashboard') {
     return (
@@ -129,15 +211,51 @@ const AdminDashboard = ({ classroom, onGenerateNewCode }: AdminDashboardProps) =
             </div>
             <div>
               <h3 className="font-semibold mb-2">학급 코드</h3>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-2xl font-bold font-mono bg-muted px-3 py-1 rounded">
                   {classroom.code}
                 </span>
                 <Button size="sm" onClick={handleCopyCode}>
                   복사
                 </Button>
+                <Dialog open={isCodeDialogOpen} onOpenChange={setIsCodeDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" variant="outline" className="flex items-center gap-1">
+                      <Edit3 className="h-3 w-3" />
+                      코드 수정
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>학급 코드 수정</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-sm font-medium">새 학급 코드</label>
+                        <Input
+                          value={customCode}
+                          onChange={(e) => setCustomCode(e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 5))}
+                          placeholder="예: ABCDE"
+                          maxLength={5}
+                          className="mt-1"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          5글자 영문 대문자만 입력 가능합니다.
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button onClick={handleUpdateCode} disabled={isUpdatingCode} className="flex-1">
+                          {isUpdatingCode ? "변경 중..." : "코드 변경"}
+                        </Button>
+                        <Button variant="outline" onClick={() => setIsCodeDialogOpen(false)} disabled={isUpdatingCode}>
+                          취소
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
                 <Button size="sm" variant="outline" onClick={onGenerateNewCode}>
-                  새 코드 생성
+                  랜덤 코드 생성
                 </Button>
               </div>
               <p className="text-sm text-muted-foreground mt-2">
