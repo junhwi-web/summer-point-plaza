@@ -1,18 +1,58 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, PenTool, BookOpen, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 interface StampCalendarProps {
+  student?: { id: string; name: string };
   submissions?: Array<{
     date: Date;
     type: "diary" | "book-report" | "free-task";
   }>;
 }
 
-const StampCalendar = ({ submissions = [] }: StampCalendarProps) => {
+const StampCalendar = ({ student, submissions = [] }: StampCalendarProps) => {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [realSubmissions, setRealSubmissions] = useState<Array<{
+    date: Date;
+    type: "diary" | "book-report" | "free-task";
+  }>>([]);
+
+  useEffect(() => {
+    if (student?.id) {
+      fetchSubmissions();
+    }
+  }, [student?.id]);
+
+  const fetchSubmissions = async () => {
+    if (!student?.id) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('homework_submissions')
+        .select('homework_type, submitted_at')
+        .eq('student_id', student.id);
+
+      if (error) {
+        console.error('Error fetching submissions:', error);
+        return;
+      }
+
+      const formattedSubmissions = data.map(sub => ({
+        date: new Date(sub.submitted_at),
+        type: sub.homework_type as "diary" | "book-report" | "free-task"
+      }));
+
+      setRealSubmissions(formattedSubmissions);
+    } catch (error) {
+      console.error('Error fetching submissions:', error);
+    }
+  };
+
+  // Use real submissions if student is logged in, otherwise use props
+  const activeSubmissions = student?.id ? realSubmissions : submissions;
 
   const getVacationData = () => {
     const startDate = new Date(2025, 6, 27); // 7/27
@@ -32,7 +72,7 @@ const StampCalendar = ({ submissions = [] }: StampCalendarProps) => {
   const { days, startDate, endDate } = getVacationData();
 
   const getSubmissionsForDate = (date: Date) => {
-    return submissions.filter(sub => 
+    return activeSubmissions.filter(sub => 
       sub.date.toDateString() === date.toDateString()
     );
   };
@@ -189,19 +229,19 @@ const StampCalendar = ({ submissions = [] }: StampCalendarProps) => {
           <div className="flex justify-center gap-6">
             <div className="text-center bg-primary/10 rounded-xl p-3">
               <div className="text-2xl font-bold text-primary">
-                {submissions.filter(s => s.type === "diary").length}
+                {activeSubmissions.filter(s => s.type === "diary").length}
               </div>
               <div className="text-sm font-medium text-muted-foreground">일기 ✏️</div>
             </div>
             <div className="text-center bg-accent/10 rounded-xl p-3">
               <div className="text-2xl font-bold text-accent-foreground">
-                {submissions.filter(s => s.type === "book-report").length}
+                {activeSubmissions.filter(s => s.type === "book-report").length}
               </div>
               <div className="text-sm font-medium text-muted-foreground">독후감 📚</div>
             </div>
             <div className="text-center bg-success/10 rounded-xl p-3">
               <div className="text-2xl font-bold text-success">
-                {submissions.filter(s => s.type === "free-task").length}
+                {activeSubmissions.filter(s => s.type === "free-task").length}
               </div>
               <div className="text-sm font-medium text-muted-foreground">자유과제 ⭐</div>
             </div>

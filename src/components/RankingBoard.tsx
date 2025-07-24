@@ -1,26 +1,114 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Student {
-  id: number;
+  id: string;
   name: string;
   points: number;
   rank: number;
   completedTasks: number;
 }
 
-const RankingBoard = () => {
-  const students: Student[] = [
-    { id: 1, name: "김민수", points: 250, rank: 1, completedTasks: 15 },
-    { id: 2, name: "이지은", points: 230, rank: 2, completedTasks: 14 },
-    { id: 3, name: "박준호", points: 210, rank: 3, completedTasks: 13 },
-    { id: 4, name: "최서연", points: 190, rank: 4, completedTasks: 12 },
-    { id: 5, name: "정우진", points: 170, rank: 5, completedTasks: 11 },
-    { id: 6, name: "한소영", points: 150, rank: 6, completedTasks: 10 },
-    { id: 7, name: "강도현", points: 130, rank: 7, completedTasks: 9 },
-    { id: 8, name: "윤채원", points: 110, rank: 8, completedTasks: 8 },
-  ];
+interface RankingBoardProps {
+  classroom?: { id: string };
+  currentStudent?: { id: string; name: string };
+}
+
+const RankingBoard = ({ classroom, currentStudent }: RankingBoardProps) => {
+  const [students, setStudents] = useState<Student[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (classroom?.id) {
+      fetchRankings();
+    }
+  }, [classroom?.id]);
+
+  const fetchRankings = async () => {
+    if (!classroom?.id) return;
+
+    try {
+      setLoading(true);
+
+      // Fetch all students in the classroom
+      const { data: studentsData, error: studentsError } = await supabase
+        .from('students')
+        .select('id, name')
+        .eq('classroom_id', classroom.id);
+
+      if (studentsError) {
+        console.error('Error fetching students:', studentsError);
+        return;
+      }
+
+      // Fetch submissions for all students
+      const studentRankings: Student[] = [];
+
+      for (const student of studentsData) {
+        const { data: submissions, error: submissionsError } = await supabase
+          .from('homework_submissions')
+          .select('points')
+          .eq('student_id', student.id);
+
+        if (submissionsError) {
+          console.error('Error fetching submissions for student:', student.id, submissionsError);
+          continue;
+        }
+
+        const totalPoints = submissions.reduce((sum, sub) => sum + sub.points, 0);
+        const completedTasks = submissions.length;
+
+        studentRankings.push({
+          id: student.id,
+          name: student.name,
+          points: totalPoints,
+          rank: 0, // Will be set after sorting
+          completedTasks
+        });
+      }
+
+      // Sort by points and assign ranks
+      studentRankings.sort((a, b) => b.points - a.points);
+      studentRankings.forEach((student, index) => {
+        student.rank = index + 1;
+      });
+
+      setStudents(studentRankings);
+    } catch (error) {
+      console.error('Error fetching rankings:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-3xl font-bold text-center font-heading">🏆 학급 랭킹</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center text-muted-foreground">랭킹을 불러오는 중...</div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (students.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-3xl font-bold text-center font-heading">🏆 학급 랭킹</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center text-muted-foreground">아직 제출된 과제가 없습니다.</div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   const getRankDisplay = (rank: number) => {
     switch (rank) {

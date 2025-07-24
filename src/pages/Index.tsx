@@ -365,33 +365,25 @@ const Index = () => {
           <>
             <VacationInfo classroomId={classroom?.id} />
             
-            {/* Content Grid */}
+              {/* Content Grid */}
             <div className="grid lg:grid-cols-3 gap-8">
               {/* Homework Submission - Takes 2 columns */}
               <div className="lg:col-span-2 space-y-8">
-                <HomeworkSubmission />
+                <HomeworkSubmission 
+                  student={student} 
+                  onSubmissionUpdate={() => {
+                    // Trigger re-fetch of data in other components
+                    window.location.reload(); // Simple solution for now
+                  }} 
+                />
                 
                 {/* Stamp Calendar */}
-                <StampCalendar 
-                  submissions={[
-                    // 예시 데이터 - 실제로는 상태에서 관리될 것
-                    { date: new Date(2025, 6, 28), type: "diary" },
-                    { date: new Date(2025, 6, 30), type: "book-report" },
-                    { date: new Date(2025, 7, 2), type: "free-task" },
-                    { date: new Date(2025, 7, 5), type: "diary" },
-                    { date: new Date(2025, 7, 5), type: "book-report" }, // 같은 날 여러 과제
-                    { date: new Date(2025, 7, 8), type: "book-report" },
-                    { date: new Date(2025, 7, 10), type: "diary" },
-                    { date: new Date(2025, 7, 10), type: "free-task" }, // 같은 날 여러 과제
-                    { date: new Date(2025, 7, 10), type: "book-report" }, // 같은 날 3개 과제
-                    { date: new Date(2025, 7, 15), type: "free-task" },
-                  ]}
-                />
+                <StampCalendar student={student} />
               </div>
               
               {/* Ranking Board - Takes 1 column */}
               <div>
-                <RankingBoard />
+                <RankingBoard classroom={classroom} currentStudent={student} />
               </div>
             </div>
 

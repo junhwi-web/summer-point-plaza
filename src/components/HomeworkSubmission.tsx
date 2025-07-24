@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { BookOpen, PenTool, Star, Plus } from "lucide-react";
 import PhotoUpload from "./PhotoUpload";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Homework {
   id: string;
@@ -18,13 +19,55 @@ interface Homework {
   points: number;
 }
 
-const HomeworkSubmission = () => {
+interface HomeworkSubmissionProps {
+  student?: { id: string; name: string };
+  onSubmissionUpdate?: () => void;
+}
+
+const HomeworkSubmission = ({ student, onSubmissionUpdate }: HomeworkSubmissionProps) => {
   const [homeworks, setHomeworks] = useState<Homework[]>([]);
   const [activeTab, setActiveTab] = useState<"diary" | "book-report" | "free-task">("diary");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [photo, setPhoto] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (student?.id) {
+      fetchHomeworks();
+    }
+  }, [student?.id]);
+
+  const fetchHomeworks = async () => {
+    if (!student?.id) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('homework_submissions')
+        .select('*')
+        .eq('student_id', student.id)
+        .order('submitted_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching homeworks:', error);
+        return;
+      }
+
+      const formattedHomeworks: Homework[] = data.map(sub => ({
+        id: sub.id,
+        type: sub.homework_type as "diary" | "book-report" | "free-task",
+        title: `${sub.homework_type} 과제`, // We don't store title separately, using type
+        content: sub.homework_type, // We don't store content separately
+        submittedAt: new Date(sub.submitted_at),
+        points: sub.points
+      }));
+
+      setHomeworks(formattedHomeworks);
+    } catch (error) {
+      console.error('Error fetching homeworks:', error);
+    }
+  };
 
   const homeworkTypes = {
     diary: { icon: PenTool, label: "일기 쓰기", points: 10, color: "bg-primary", minRequired: 3 },
@@ -32,7 +75,7 @@ const HomeworkSubmission = () => {
     "free-task": { icon: Star, label: "자유 과제", points: 5, color: "bg-success", minRequired: 0 }
   };
 
-  const submitHomework = () => {
+  const submitHomework = async () => {
     if (!title.trim() || !content.trim()) {
       toast({
         title: "오류",
@@ -42,26 +85,72 @@ const HomeworkSubmission = () => {
       return;
     }
 
-    const newHomework: Homework = {
-      id: Date.now().toString(),
-      type: activeTab,
-      title: title.trim(),
-      content: content.trim(),
-      photo: photo,
-      submittedAt: new Date(),
-      points: homeworkTypes[activeTab].points
-    };
+    if (!student?.id) {
+      toast({
+        title: "오류",
+        description: "학생 정보를 찾을 수 없습니다.",
+        variant: "destructive"
+      });
+      return;
+    }
 
-    setHomeworks([...homeworks, newHomework]);
-    setTitle("");
-    setContent("");
-    setPhoto("");
+    setSubmitting(true);
 
-    toast({
-      title: "과제 제출 완료!",
-      description: `${homeworkTypes[activeTab].points}포인트를 획득했습니다!`,
-      variant: "default"
-    });
+    try {
+      const { data, error } = await supabase
+        .from('homework_submissions')
+        .insert({
+          student_id: student.id,
+          homework_type: activeTab,
+          points: homeworkTypes[activeTab].points
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error submitting homework:', error);
+        toast({
+          title: "제출 실패",
+          description: "과제 제출 중 오류가 발생했습니다.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Update local state
+      const newHomework: Homework = {
+        id: data.id,
+        type: activeTab,
+        title: title.trim(),
+        content: content.trim(),
+        photo: photo,
+        submittedAt: new Date(data.submitted_at),
+        points: data.points
+      };
+
+      setHomeworks([newHomework, ...homeworks]);
+      setTitle("");
+      setContent("");
+      setPhoto("");
+
+      toast({
+        title: "과제 제출 완료!",
+        description: `${homeworkTypes[activeTab].points}포인트를 획득했습니다!`,
+        variant: "default"
+      });
+
+      // Notify parent component
+      onSubmissionUpdate?.();
+    } catch (error) {
+      console.error('Error submitting homework:', error);
+      toast({
+        title: "제출 실패",
+        description: "과제 제출 중 오류가 발생했습니다.",
+        variant: "destructive"
+      });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const getSubmissionCount = (type: string) => {
@@ -137,8 +226,12 @@ const HomeworkSubmission = () => {
               />
             </div>
             
-            <Button onClick={submitHomework} className="w-full">
-              과제 제출하기 (+{homeworkTypes[activeTab].points} 포인트)
+            <Button 
+              onClick={submitHomework} 
+              className="w-full" 
+              disabled={submitting || !student?.id}
+            >
+              {submitting ? "제출 중..." : `과제 제출하기 (+${homeworkTypes[activeTab].points} 포인트)`}
             </Button>
           </CardContent>
         </Card>
