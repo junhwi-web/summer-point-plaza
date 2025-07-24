@@ -207,7 +207,7 @@ const Index = () => {
               <BookOpen className="h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0" />
               <div className="min-w-0">
                 <h1 className="text-lg sm:text-xl lg:text-2xl font-bold leading-tight">
-                  여름방학 과제 포인트 시스템
+                  빛나는 나의 여름방학
                 </h1>
                 <p className="text-xs sm:text-sm text-primary-foreground/90 leading-tight hidden sm:block">
                   과제를 제출하고 포인트를 모아 랭킹에 도전해보세요!
