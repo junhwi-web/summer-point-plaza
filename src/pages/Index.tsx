@@ -223,15 +223,17 @@ const Index = () => {
                   </p>
                 )}
               </div>
-              <Button 
-                variant="secondary" 
-                size="sm" 
-                onClick={handleLogout}
-                className="flex items-center gap-2 flex-shrink-0"
-              >
-                <LogOut className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="hidden sm:inline">로그아웃</span>
-              </Button>
+              {user && (
+                <Button 
+                  variant="secondary" 
+                  size="sm" 
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 flex-shrink-0"
+                >
+                  <LogOut className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:inline">로그아웃</span>
+                </Button>
+              )}
             </div>
           </div>
         </div>

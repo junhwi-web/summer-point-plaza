@@ -31,11 +31,13 @@ const HomeworkSubmission = ({ student, onSubmissionUpdate }: HomeworkSubmissionP
   const [content, setContent] = useState("");
   const [photo, setPhoto] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [todaySubmissions, setTodaySubmissions] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
 
   useEffect(() => {
     if (student?.id) {
       fetchHomeworks();
+      checkTodaySubmissions();
     }
   }, [student?.id]);
 
@@ -69,6 +71,35 @@ const HomeworkSubmission = ({ student, onSubmissionUpdate }: HomeworkSubmissionP
     }
   };
 
+  const checkTodaySubmissions = async () => {
+    if (!student?.id) return;
+
+    const today = new Date().toISOString().split('T')[0];
+    
+    try {
+      const { data, error } = await supabase
+        .from('homework_submissions')
+        .select('homework_type')
+        .eq('student_id', student.id)
+        .gte('submitted_at', `${today}T00:00:00.000Z`)
+        .lt('submitted_at', `${today}T23:59:59.999Z`);
+
+      if (error) {
+        console.error('Error checking today submissions:', error);
+        return;
+      }
+
+      const todaySubmissionsMap: Record<string, boolean> = {};
+      data.forEach(sub => {
+        todaySubmissionsMap[sub.homework_type] = true;
+      });
+      
+      setTodaySubmissions(todaySubmissionsMap);
+    } catch (error) {
+      console.error('Error checking today submissions:', error);
+    }
+  };
+
   const homeworkTypes = {
     diary: { icon: PenTool, label: "일기 쓰기", points: 10, color: "bg-primary", minRequired: 3 },
     "book-report": { icon: BookOpen, label: "독후감 쓰기", points: 15, color: "bg-accent", minRequired: 3 },
@@ -89,6 +120,16 @@ const HomeworkSubmission = ({ student, onSubmissionUpdate }: HomeworkSubmissionP
       toast({
         title: "오류",
         description: "학생 정보를 찾을 수 없습니다.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // 하루에 각 과제 유형당 1편만 제출 가능
+    if (todaySubmissions[activeTab]) {
+      toast({
+        title: "제출 제한",
+        description: `${homeworkTypes[activeTab].label}은 하루에 1편만 제출할 수 있습니다. 내일 다시 시도해주세요.`,
         variant: "destructive"
       });
       return;
@@ -138,6 +179,9 @@ const HomeworkSubmission = ({ student, onSubmissionUpdate }: HomeworkSubmissionP
         description: `${homeworkTypes[activeTab].points}포인트를 획득했습니다!`,
         variant: "default"
       });
+
+      // Update today submissions state
+      setTodaySubmissions(prev => ({ ...prev, [activeTab]: true }));
 
       // Notify parent component
       onSubmissionUpdate?.();
@@ -229,10 +273,21 @@ const HomeworkSubmission = ({ student, onSubmissionUpdate }: HomeworkSubmissionP
             <Button 
               onClick={submitHomework} 
               className="w-full" 
-              disabled={submitting || !student?.id}
+              disabled={submitting || !student?.id || todaySubmissions[activeTab]}
             >
-              {submitting ? "제출 중..." : `과제 제출하기 (+${homeworkTypes[activeTab].points} 포인트)`}
+              {submitting 
+                ? "제출 중..." 
+                : todaySubmissions[activeTab]
+                ? "오늘은 이미 제출했습니다"
+                : `과제 제출하기 (+${homeworkTypes[activeTab].points} 포인트)`
+              }
             </Button>
+            
+            {todaySubmissions[activeTab] && (
+              <p className="text-sm text-muted-foreground text-center">
+                {homeworkTypes[activeTab].label}은 하루에 1편만 제출할 수 있습니다. 내일 다시 시도해주세요.
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>
