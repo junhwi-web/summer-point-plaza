@@ -4,10 +4,12 @@ import VacationInfo from "@/components/VacationInfo";
 import HomeworkSubmission from "@/components/HomeworkSubmission";
 import RankingBoard from "@/components/RankingBoard";
 import StampCalendar from "@/components/StampCalendar";
+import AdminDashboard from "@/components/AdminDashboard";
 import { BookOpen, Users, Target, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
+import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -15,6 +17,7 @@ const Index = () => {
   const [student, setStudent] = useState<any>(null);
   const [classroom, setClassroom] = useState<any>(null);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
     // Check for authentication state
@@ -74,6 +77,7 @@ const Index = () => {
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log("Initial session check:", session?.user?.email);
       setSession(session);
       setUser(session?.user ?? null);
     });
@@ -93,12 +97,18 @@ const Index = () => {
   // Redirect to auth if no user or student is logged in
   useEffect(() => {
     console.log("Checking auth state - user:", user?.email, "student:", student?.name);
-    if (!user && !student) {
-      console.log("No user or student found, redirecting to /auth");
-      navigate('/auth');
-    } else {
-      console.log("User authenticated, staying on main page");
-    }
+    
+    // Don't redirect immediately, give some time for auth state to load
+    const timer = setTimeout(() => {
+      if (!user && !student) {
+        console.log("No user or student found after timeout, redirecting to /auth");
+        navigate('/auth');
+      } else {
+        console.log("User authenticated, staying on main page");
+      }
+    }, 1000); // Wait 1 second
+
+    return () => clearTimeout(timer);
   }, [user, student, navigate]);
 
   const handleLogout = async () => {
@@ -117,11 +127,51 @@ const Index = () => {
     if (student) {
       return `${student.name} (${classroom?.name})`;
     }
-    if (user) {
+    if (user?.email) {
       return user.email;
     }
     return "게스트";
   };
+
+  const handleGenerateNewCode = async () => {
+    if (!user || !classroom) return;
+    
+    try {
+      const response = await supabase.rpc('generate_class_code');
+      const newCode = response.data;
+      
+      const { error } = await supabase
+        .from('classrooms')
+        .update({ code: newCode })
+        .eq('id', classroom.id);
+        
+      if (error) throw error;
+      
+      setClassroom({ ...classroom, code: newCode });
+      toast({
+        title: "학급 코드 변경됨",
+        description: `새 학급 코드: ${newCode}`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "오류 발생",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Show loading while checking auth state
+  if (!user && !student) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">로딩 중...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -164,65 +214,75 @@ const Index = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        {/* Vacation Information */}
-        <VacationInfo />
-
-        {/* Content Grid */}
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Homework Submission - Takes 2 columns */}
-          <div className="lg:col-span-2 space-y-8">
-            <HomeworkSubmission />
+        {user ? (
+          // Admin View
+          <>
+            <VacationInfo />
+            <AdminDashboard classroom={classroom} onGenerateNewCode={handleGenerateNewCode} />
+          </>
+        ) : (
+          // Student View  
+          <>
+            <VacationInfo />
             
-            {/* Stamp Calendar */}
-            <StampCalendar 
-              submissions={[
-                // 예시 데이터 - 실제로는 상태에서 관리될 것
-                { date: new Date(2025, 6, 28), type: "diary" },
-                { date: new Date(2025, 6, 30), type: "book-report" },
-                { date: new Date(2025, 7, 2), type: "free-task" },
-                { date: new Date(2025, 7, 5), type: "diary" },
-                { date: new Date(2025, 7, 5), type: "book-report" }, // 같은 날 여러 과제
-                { date: new Date(2025, 7, 8), type: "book-report" },
-                { date: new Date(2025, 7, 10), type: "diary" },
-                { date: new Date(2025, 7, 10), type: "free-task" }, // 같은 날 여러 과제
-                { date: new Date(2025, 7, 10), type: "book-report" }, // 같은 날 3개 과제
-                { date: new Date(2025, 7, 15), type: "free-task" },
-              ]}
-            />
-          </div>
-          
-          {/* Ranking Board - Takes 1 column */}
-          <div>
-            <RankingBoard />
-          </div>
-        </div>
+            {/* Content Grid */}
+            <div className="grid lg:grid-cols-3 gap-8">
+              {/* Homework Submission - Takes 2 columns */}
+              <div className="lg:col-span-2 space-y-8">
+                <HomeworkSubmission />
+                
+                {/* Stamp Calendar */}
+                <StampCalendar 
+                  submissions={[
+                    // 예시 데이터 - 실제로는 상태에서 관리될 것
+                    { date: new Date(2025, 6, 28), type: "diary" },
+                    { date: new Date(2025, 6, 30), type: "book-report" },
+                    { date: new Date(2025, 7, 2), type: "free-task" },
+                    { date: new Date(2025, 7, 5), type: "diary" },
+                    { date: new Date(2025, 7, 5), type: "book-report" }, // 같은 날 여러 과제
+                    { date: new Date(2025, 7, 8), type: "book-report" },
+                    { date: new Date(2025, 7, 10), type: "diary" },
+                    { date: new Date(2025, 7, 10), type: "free-task" }, // 같은 날 여러 과제
+                    { date: new Date(2025, 7, 10), type: "book-report" }, // 같은 날 3개 과제
+                    { date: new Date(2025, 7, 15), type: "free-task" },
+                  ]}
+                />
+              </div>
+              
+              {/* Ranking Board - Takes 1 column */}
+              <div>
+                <RankingBoard />
+              </div>
+            </div>
 
-        {/* Stats Cards */}
-        <div className="grid md:grid-cols-3 gap-6 mt-8">
-          <div className="bg-card p-6 rounded-lg border text-center">
-            <Target className="h-8 w-8 mx-auto mb-2 text-primary" />
-            <h3 className="font-semibold text-lg">과제 목표</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              일기 3편, 독후감 3편 이상 작성
-            </p>
-          </div>
-          
-          <div className="bg-card p-6 rounded-lg border text-center">
-            <Users className="h-8 w-8 mx-auto mb-2 text-accent" />
-            <h3 className="font-semibold text-lg">참여 학생</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              전체 학급이 함께 참여하는 활동
-            </p>
-          </div>
-          
-          <div className="bg-card p-6 rounded-lg border text-center">
-            <BookOpen className="h-8 w-8 mx-auto mb-2 text-success" />
-            <h3 className="font-semibold text-lg">자유 과제</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              나만의 특별한 과제로 추가 포인트 획득
-            </p>
-          </div>
-        </div>
+            {/* Stats Cards */}
+            <div className="grid md:grid-cols-3 gap-6 mt-8">
+              <div className="bg-card p-6 rounded-lg border text-center">
+                <Target className="h-8 w-8 mx-auto mb-2 text-primary" />
+                <h3 className="font-semibold text-lg">과제 목표</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  일기 3편, 독후감 3편 이상 작성
+                </p>
+              </div>
+              
+              <div className="bg-card p-6 rounded-lg border text-center">
+                <Users className="h-8 w-8 mx-auto mb-2 text-accent" />
+                <h3 className="font-semibold text-lg">참여 학생</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  전체 학급이 함께 참여하는 활동
+                </p>
+              </div>
+              
+              <div className="bg-card p-6 rounded-lg border text-center">
+                <BookOpen className="h-8 w-8 mx-auto mb-2 text-success" />
+                <h3 className="font-semibold text-lg">자유 과제</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  나만의 특별한 과제로 추가 포인트 획득
+                </p>
+              </div>
+            </div>
+          </>
+        )}
       </main>
     </div>
   );
