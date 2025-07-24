@@ -278,15 +278,17 @@ const HomeworkSubmission = ({ student, onSubmissionUpdate }: HomeworkSubmissionP
               />
             </div>
             
-            {/* 사진 업로드 */}
-            <div>
-              <label className="text-xs sm:text-sm font-medium mb-2 block">과제 사진</label>
-              <PhotoUpload 
-                onPhotoCapture={setPhoto}
-                capturedPhoto={photo}
-                required={homeworkTypes[activeTab].photoRequired}
-              />
-            </div>
+            {/* 자유과제에만 사진 업로드 */}
+            {activeTab === "free-task" && (
+              <div>
+                <label className="text-xs sm:text-sm font-medium mb-2 block">과제 사진</label>
+                <PhotoUpload 
+                  onPhotoCapture={setPhoto}
+                  capturedPhoto={photo}
+                  required={homeworkTypes[activeTab].photoRequired}
+                />
+              </div>
+            )}
             
             <Button 
               onClick={submitHomework} 
