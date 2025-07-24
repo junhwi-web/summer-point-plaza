@@ -1,22 +1,113 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import VacationInfo from "@/components/VacationInfo";
 import HomeworkSubmission from "@/components/HomeworkSubmission";
 import RankingBoard from "@/components/RankingBoard";
 import StampCalendar from "@/components/StampCalendar";
-import { BookOpen, Users, Target } from "lucide-react";
+import { BookOpen, Users, Target, LogOut } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { Session, User } from "@supabase/supabase-js";
 
 const Index = () => {
+  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [student, setStudent] = useState<any>(null);
+  const [classroom, setClassroom] = useState<any>(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check for authentication state
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+      }
+    );
+
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+    });
+
+    // Check for student session
+    const studentData = sessionStorage.getItem('student');
+    const classroomData = sessionStorage.getItem('classroom');
+    
+    if (studentData && classroomData) {
+      setStudent(JSON.parse(studentData));
+      setClassroom(JSON.parse(classroomData));
+    }
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Redirect to auth if no user or student is logged in
+  useEffect(() => {
+    if (!user && !student) {
+      navigate('/auth');
+    }
+  }, [user, student, navigate]);
+
+  const handleLogout = async () => {
+    if (user) {
+      await supabase.auth.signOut();
+    }
+    
+    // Clear student session
+    sessionStorage.removeItem('student');
+    sessionStorage.removeItem('classroom');
+    
+    navigate('/auth');
+  };
+
+  const getUserDisplayName = () => {
+    if (student) {
+      return `${student.name} (${classroom?.name})`;
+    }
+    if (user) {
+      return user.email;
+    }
+    return "게스트";
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="bg-gradient-to-r from-primary to-accent text-primary-foreground py-6">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-center gap-3">
-            <BookOpen className="h-8 w-8" />
-            <h1 className="text-3xl font-bold">여름방학 과제 포인트 시스템</h1>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <BookOpen className="h-8 w-8" />
+              <div>
+                <h1 className="text-3xl font-bold">여름방학 과제 포인트 시스템</h1>
+                <p className="text-primary-foreground/90">
+                  과제를 제출하고 포인트를 모아 랭킹에 도전해보세요!
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <p className="text-sm text-primary-foreground/80">접속 중</p>
+                <p className="font-semibold">{getUserDisplayName()}</p>
+                {classroom && user && (
+                  <p className="text-sm text-primary-foreground/80">
+                    학급 코드: {classroom.code}
+                  </p>
+                )}
+              </div>
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                onClick={handleLogout}
+                className="flex items-center gap-2"
+              >
+                <LogOut className="h-4 w-4" />
+                로그아웃
+              </Button>
+            </div>
           </div>
-          <p className="text-center mt-2 text-primary-foreground/90">
-            과제를 제출하고 포인트를 모아 랭킹에 도전해보세요!
-          </p>
         </div>
       </header>
 
