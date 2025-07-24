@@ -17,6 +17,9 @@ interface HomeworkSubmission {
   points: number;
   submitted_at: string;
   student_id: string;
+  title?: string;
+  content?: string;
+  photo?: string;
 }
 
 interface HomeworkStatusProps {
@@ -190,26 +193,48 @@ const HomeworkStatus = ({ classroom }: HomeworkStatusProps) => {
                 ) : (
                   <div className="space-y-4">
                     {submissions.map((submission) => (
-                      <div
-                        key={submission.id}
-                        className="flex items-center justify-between p-4 border rounded-lg"
-                      >
-                        <div className="flex items-center gap-3">
-                          <Badge className={getHomeworkTypeColor(submission.homework_type)}>
-                            {getHomeworkTypeLabel(submission.homework_type)}
-                          </Badge>
-                          <div>
-                            <div className="text-sm text-muted-foreground">
-                              {new Date(submission.submitted_at).toLocaleDateString()} {new Date(submission.submitted_at).toLocaleTimeString()}
+                      <div key={submission.id} className="border rounded-lg overflow-hidden">
+                        <div className="flex items-center justify-between p-4 bg-muted/30">
+                          <div className="flex items-center gap-3">
+                            <Badge className={getHomeworkTypeColor(submission.homework_type)}>
+                              {getHomeworkTypeLabel(submission.homework_type)}
+                            </Badge>
+                            <div>
+                              {submission.title && (
+                                <div className="font-medium">{submission.title}</div>
+                              )}
+                              <div className="text-sm text-muted-foreground">
+                                {new Date(submission.submitted_at).toLocaleDateString()} {new Date(submission.submitted_at).toLocaleTimeString()}
+                              </div>
                             </div>
                           </div>
+                          <div className="flex items-center gap-2">
+                            <Award className="h-4 w-4 text-yellow-500" />
+                            <span className="font-semibold text-yellow-600">
+                              {submission.points}점
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Award className="h-4 w-4 text-yellow-500" />
-                          <span className="font-semibold text-yellow-600">
-                            {submission.points}점
-                          </span>
-                        </div>
+                        {(submission.content || submission.photo) && (
+                          <div className="p-4 space-y-3">
+                            {submission.content && (
+                              <div>
+                                <h4 className="text-sm font-medium text-muted-foreground mb-2">내용</h4>
+                                <p className="text-sm leading-relaxed whitespace-pre-wrap">{submission.content}</p>
+                              </div>
+                            )}
+                            {submission.photo && (
+                              <div>
+                                <h4 className="text-sm font-medium text-muted-foreground mb-2">첨부 사진</h4>
+                                <img 
+                                  src={submission.photo} 
+                                  alt="과제 사진" 
+                                  className="max-w-full h-auto rounded border max-h-64 object-contain"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
