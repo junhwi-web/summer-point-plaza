@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import StudentManagement from "./StudentManagement";
 import HomeworkStatus from "./HomeworkStatus";
 import RankingManagement from "./RankingManagement";
+import NoticeManagement from "./NoticeManagement";
 
 interface AdminDashboardProps {
   classroom: any;
@@ -105,7 +106,7 @@ const AdminDashboard = ({ classroom, onGenerateNewCode }: AdminDashboardProps) =
         {currentView === 'students' && <StudentManagement classroom={classroom} />}
         {currentView === 'homework' && <HomeworkStatus classroom={classroom} />}
         {currentView === 'ranking' && <RankingManagement classroom={classroom} />}
-        {currentView === 'notices' && <div>공지사항 기능 준비 중...</div>}
+        {currentView === 'notices' && <NoticeManagement classroom={classroom} />}
       </div>
     );
   }

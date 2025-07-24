@@ -240,7 +240,7 @@ const Index = () => {
         {user && classroom ? (
           // Admin View - only show if both user and classroom exist
           <>
-            <VacationInfo />
+            <VacationInfo classroomId={classroom.id} />
             <AdminDashboard classroom={classroom} onGenerateNewCode={handleGenerateNewCode} />
           </>
         ) : user && !classroom ? (
@@ -363,7 +363,7 @@ const Index = () => {
         ) : (
           // Student View  
           <>
-            <VacationInfo />
+            <VacationInfo classroomId={classroom?.id} />
             
             {/* Content Grid */}
             <div className="grid lg:grid-cols-3 gap-8">
