@@ -37,17 +37,9 @@ const Index = () => {
             try {
               console.log("Creating classroom with name:", pendingClassroomName);
               
-              // 1. Generate class code
+              // 1. Generate class code directly
               console.log("Step 1: Generating class code...");
-              const codeResponse = await supabase.rpc('generate_class_code');
-              console.log("RPC response:", codeResponse);
-              
-              if (codeResponse.error) {
-                console.error("Error generating class code:", codeResponse.error);
-                return;
-              }
-              
-              const classCode = codeResponse.data;
+              const classCode = Array(5).fill(0).map(() => String.fromCharCode(65 + Math.floor(Math.random() * 26))).join('');
               console.log("Generated class code:", classCode);
 
               // 2. Create classroom
