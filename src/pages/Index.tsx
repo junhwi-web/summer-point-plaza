@@ -260,21 +260,41 @@ const Index = () => {
                     e.preventDefault();
                     const formData = new FormData(e.currentTarget);
                     const name = formData.get('classroomName') as string;
+                    const customCode = formData.get('classroomCode') as string;
                     
                     if (!name.trim()) return;
                     
                     try {
-                      console.log("Creating classroom with name:", name);
+                      console.log("Creating classroom with name:", name, "and code:", customCode);
                       
-                      // Generate class code
-                      const classCode = Array(5).fill(0).map(() => String.fromCharCode(65 + Math.floor(Math.random() * 26))).join('');
-                      console.log("Generated class code:", classCode);
+                      // Use custom code or generate random one
+                      const finalCode = customCode.trim().toUpperCase() || Array(5).fill(0).map(() => String.fromCharCode(65 + Math.floor(Math.random() * 26))).join('');
+                      
+                      // Check if custom code already exists
+                      if (customCode.trim()) {
+                        const { data: existingClassroom } = await supabase
+                          .from('classrooms')
+                          .select('id')
+                          .eq('code', finalCode)
+                          .maybeSingle();
+                          
+                        if (existingClassroom) {
+                          toast({
+                            title: "오류 발생",
+                            description: "이미 사용 중인 학급 코드입니다. 다른 코드를 입력해주세요.",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+                      }
+                      
+                      console.log("Final class code:", finalCode);
 
                       // Create classroom
                       const { data: newClassroom, error } = await supabase
                         .from('classrooms')
                         .insert({
-                          code: classCode,
+                          code: finalCode,
                           name: name,
                           teacher_email: user.email
                         })
@@ -295,7 +315,7 @@ const Index = () => {
                       setClassroom(newClassroom);
                       toast({
                         title: "학급 생성 완료",
-                        description: `학급 코드: ${classCode}`,
+                        description: `학급 코드: ${finalCode}`,
                       });
                     } catch (error: any) {
                       console.error('Error creating classroom:', error);
@@ -315,6 +335,22 @@ const Index = () => {
                         placeholder="학급명을 입력하세요"
                         required
                       />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="classroomCode">학급 코드 (선택사항)</Label>
+                      <Input
+                        id="classroomCode"
+                        name="classroomCode"
+                        type="text"
+                        placeholder="예: ABCDE (비어두면 랜덤 생성)"
+                        maxLength={5}
+                        onChange={(e) => {
+                          e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, '');
+                        }}
+                      />
+                      <p className="text-sm text-muted-foreground">
+                        5글자 영문 대문자만 입력 가능합니다. 비워두면 랜덤으로 생성됩니다.
+                      </p>
                     </div>
                     <Button type="submit" className="w-full">
                       학급 만들기
