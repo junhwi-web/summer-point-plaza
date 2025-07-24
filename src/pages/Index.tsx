@@ -223,7 +223,7 @@ const Index = () => {
                   </p>
                 )}
               </div>
-              {user && (
+              {user && !student && (
                 <Button 
                   variant="secondary" 
                   size="sm" 
