@@ -2,40 +2,71 @@ import { useState, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Camera, Upload, X, Image } from "lucide-react";
+import { Camera, Upload, X, Image, Loader2 } from "lucide-react";
+import imageCompression from "browser-image-compression";
 
 interface PhotoUploadProps {
   onPhotoCapture: (photo: string) => void;
   capturedPhoto?: string;
+  required?: boolean;
 }
 
-const PhotoUpload = ({ onPhotoCapture, capturedPhoto }: PhotoUploadProps) => {
+const PhotoUpload = ({ onPhotoCapture, capturedPhoto, required = true }: PhotoUploadProps) => {
   const [isUsingCamera, setIsUsingCamera] = useState(false);
+  const [compressing, setCompressing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) { // 5MB 제한
-        toast({
-          title: "파일 크기 초과",
-          description: "5MB 이하의 이미지를 선택해주세요.",
-          variant: "destructive"
-        });
-        return;
-      }
+    if (!file) return;
 
+    if (file.size > 10 * 1024 * 1024) { // 10MB 제한 (압축 전)
+      toast({
+        title: "파일 크기 초과",
+        description: "10MB 이하의 이미지를 선택해주세요.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setCompressing(true);
+
+    try {
+      // 이미지 압축 설정
+      const options = {
+        maxSizeMB: required ? 0.05 : 0.1, // 자유과제(필수): 50KB, 기타(선택): 100KB
+        maxWidthOrHeight: 600,
+        useWebWorker: true,
+        quality: 0.8
+      };
+
+      const compressedFile = await imageCompression(file, options);
+      
       const reader = new FileReader();
       reader.onload = (e) => {
         const result = e.target?.result as string;
         onPhotoCapture(result);
+        
+        const originalSize = (file.size / 1024).toFixed(1);
+        const compressedSize = (compressedFile.size / 1024).toFixed(1);
+        const compressionRatio = ((1 - compressedFile.size / file.size) * 100).toFixed(1);
+        
         toast({
-          title: "사진 업로드 완료!",
-          description: "과제와 함께 사진이 첨부됩니다.",
+          title: "사진 압축 완료!",
+          description: `${originalSize}KB → ${compressedSize}KB (${compressionRatio}% 절약)`,
         });
       };
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(compressedFile);
+    } catch (error) {
+      console.error('Image compression failed:', error);
+      toast({
+        title: "압축 실패",
+        description: "이미지 압축 중 오류가 발생했습니다.",
+        variant: "destructive"
+      });
+    } finally {
+      setCompressing(false);
     }
   };
 
@@ -69,8 +100,20 @@ const PhotoUpload = ({ onPhotoCapture, capturedPhoto }: PhotoUploadProps) => {
           <div className="space-y-3">
             <Image className="h-12 w-12 mx-auto text-muted-foreground" />
             <div>
-              <p className="text-sm font-medium">과제 사진을 첨부해주세요 <span className="text-destructive">*</span></p>
-              <p className="text-xs text-muted-foreground">일기장, 독후감, 자유과제 사진 등 (필수)</p>
+              <p className="text-sm font-medium">
+                과제 사진을 첨부해주세요 
+                {required ? (
+                  <span className="text-destructive"> *</span>
+                ) : (
+                  <span className="text-muted-foreground"> (선택사항)</span>
+                )}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {required 
+                  ? "자유과제 사진 (필수, 자동 압축됩니다)" 
+                  : "일기장, 독후감 사진 등 (선택사항, 자동 압축됩니다)"
+                }
+              </p>
             </div>
           </div>
         )}
@@ -82,9 +125,19 @@ const PhotoUpload = ({ onPhotoCapture, capturedPhoto }: PhotoUploadProps) => {
               size="sm"
               onClick={() => fileInputRef.current?.click()}
               className="flex items-center gap-2"
+              disabled={compressing}
             >
-              <Upload className="h-4 w-4" />
-              갤러리에서 선택
+              {compressing ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  압축 중...
+                </>
+              ) : (
+                <>
+                  <Upload className="h-4 w-4" />
+                  갤러리에서 선택
+                </>
+              )}
             </Button>
             
             <input

@@ -101,9 +101,9 @@ const HomeworkSubmission = ({ student, onSubmissionUpdate }: HomeworkSubmissionP
   };
 
   const homeworkTypes = {
-    diary: { icon: PenTool, label: "일기 쓰기", points: 10, color: "bg-primary", minRequired: 3 },
-    "book-report": { icon: BookOpen, label: "독후감 쓰기", points: 15, color: "bg-accent", minRequired: 3 },
-    "free-task": { icon: Star, label: "자유 과제", points: 5, color: "bg-success", minRequired: 0 }
+    diary: { icon: PenTool, label: "일기 쓰기", points: 10, color: "bg-primary", minRequired: 3, photoRequired: false },
+    "book-report": { icon: BookOpen, label: "독후감 쓰기", points: 15, color: "bg-accent", minRequired: 3, photoRequired: false },
+    "free-task": { icon: Star, label: "자유 과제", points: 5, color: "bg-success", minRequired: 0, photoRequired: true }
   };
 
   const submitHomework = async () => {
@@ -116,7 +116,8 @@ const HomeworkSubmission = ({ student, onSubmissionUpdate }: HomeworkSubmissionP
       return;
     }
 
-    if (!photo.trim()) {
+    // 사진이 필수인 과제만 사진 검증
+    if (homeworkTypes[activeTab].photoRequired && !photo.trim()) {
       toast({
         title: "오류",
         description: "과제 사진을 첨부해주세요.",
@@ -283,13 +284,14 @@ const HomeworkSubmission = ({ student, onSubmissionUpdate }: HomeworkSubmissionP
               <PhotoUpload 
                 onPhotoCapture={setPhoto}
                 capturedPhoto={photo}
+                required={homeworkTypes[activeTab].photoRequired}
               />
             </div>
             
             <Button 
               onClick={submitHomework} 
               className="w-full text-sm" 
-              disabled={submitting || !student?.id || todaySubmissions[activeTab] || !photo.trim()}
+              disabled={submitting || !student?.id || todaySubmissions[activeTab] || (homeworkTypes[activeTab].photoRequired && !photo.trim())}
               size="sm"
             >
               {submitting 
