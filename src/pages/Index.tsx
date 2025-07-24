@@ -20,17 +20,23 @@ const Index = () => {
     // Check for authentication state
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log("Auth state change:", event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
         
         // If user just logged in and there's a pending classroom
         if (session?.user && event === 'SIGNED_IN') {
+          console.log("User signed in, checking for pending classroom");
           const pendingClassroomName = localStorage.getItem('pendingClassroomName');
+          console.log("Pending classroom name:", pendingClassroomName);
+          
           if (pendingClassroomName) {
             try {
+              console.log("Creating classroom with name:", pendingClassroomName);
               // Generate class code
               const response = await supabase.rpc('generate_class_code');
               const classCode = response.data;
+              console.log("Generated class code:", classCode);
 
               // Create classroom
               const { error: classroomError } = await supabase
@@ -42,6 +48,7 @@ const Index = () => {
                 });
 
               if (!classroomError) {
+                console.log("Classroom created successfully");
                 localStorage.removeItem('pendingClassroomName');
                 // Fetch the created classroom
                 const { data: newClassroom } = await supabase
@@ -51,8 +58,11 @@ const Index = () => {
                   .single();
                 
                 if (newClassroom) {
+                  console.log("Setting classroom:", newClassroom);
                   setClassroom(newClassroom);
                 }
+              } else {
+                console.error("Error creating classroom:", classroomError);
               }
             } catch (error) {
               console.error('Error creating classroom:', error);
@@ -82,8 +92,12 @@ const Index = () => {
 
   // Redirect to auth if no user or student is logged in
   useEffect(() => {
+    console.log("Checking auth state - user:", user?.email, "student:", student?.name);
     if (!user && !student) {
+      console.log("No user or student found, redirecting to /auth");
       navigate('/auth');
+    } else {
+      console.log("User authenticated, staying on main page");
     }
   }, [user, student, navigate]);
 

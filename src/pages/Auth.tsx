@@ -49,19 +49,25 @@ const Auth = () => {
         });
       } else {
         // Sign in teacher
+        console.log("Attempting to sign in with:", teacherEmail);
         const { error } = await supabase.auth.signInWithPassword({
           email: teacherEmail,
           password: teacherPassword,
         });
 
-        if (error) throw error;
+        if (error) {
+          console.error("Sign in error:", error);
+          throw error;
+        }
 
+        console.log("Sign in successful, navigating to /");
         toast({
           title: "로그인 성공",
           description: "관리자 페이지로 이동합니다.",
         });
       }
 
+      console.log("About to navigate to /");
       navigate("/");
     } catch (error: any) {
       toast({
