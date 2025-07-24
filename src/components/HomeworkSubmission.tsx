@@ -272,7 +272,11 @@ const HomeworkSubmission = ({ student, onSubmissionUpdate }: HomeworkSubmissionP
               <Textarea
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                placeholder={`${homeworkTypes[activeTab].label} 내용을 입력하세요`}
+                placeholder={
+                  activeTab === "free-task" 
+                    ? "물놀이 / 봉사활동 / 운동 / 부족한 부분 공부 / 요리 등 나의 방학을 알차게 만드는 모든 자유 과제의 내용을 입력하세요"
+                    : `${homeworkTypes[activeTab].label} 내용을 입력하세요`
+                }
                 rows={4}
                 className="text-sm resize-none"
               />
