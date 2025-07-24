@@ -225,16 +225,16 @@ const HomeworkSubmission = ({ student, onSubmissionUpdate }: HomeworkSubmissionP
   };
 
   return (
-    <div className="grid lg:grid-cols-3 gap-6">
+    <div className="grid lg:grid-cols-3 gap-4 sm:gap-6">
       {/* 과제 제출 폼 */}
       <div className="lg:col-span-2">
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Plus className="h-5 w-5" />
+          <CardHeader className="pb-3 sm:pb-6">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
               방학 과제 제출하기
             </CardTitle>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-1 sm:gap-2">
               {Object.entries(homeworkTypes).map(([key, type]) => {
                 const Icon = type.icon;
                 return (
@@ -242,11 +242,13 @@ const HomeworkSubmission = ({ student, onSubmissionUpdate }: HomeworkSubmissionP
                     key={key}
                     variant={activeTab === key ? "default" : "outline"}
                     onClick={() => setActiveTab(key as any)}
-                    className="flex items-center gap-2"
+                    className="flex items-center gap-1 text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2"
+                    size="sm"
                   >
-                    <Icon className="h-4 w-4" />
-                    {type.label}
-                    <Badge variant="secondary" className="ml-1">
+                    <Icon className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="hidden sm:inline">{type.label}</span>
+                    <span className="sm:hidden">{type.label.split(' ')[0]}</span>
+                    <Badge variant="secondary" className="ml-1 text-xs">
                       {type.points}pt
                     </Badge>
                   </Button>
@@ -254,28 +256,30 @@ const HomeworkSubmission = ({ student, onSubmissionUpdate }: HomeworkSubmissionP
               })}
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3 sm:space-y-4">
             <div>
-              <label className="text-sm font-medium">제목</label>
+              <label className="text-xs sm:text-sm font-medium">제목</label>
               <Input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder={`${homeworkTypes[activeTab].label} 제목을 입력하세요`}
+                className="text-sm"
               />
             </div>
             <div>
-              <label className="text-sm font-medium">내용</label>
+              <label className="text-xs sm:text-sm font-medium">내용</label>
               <Textarea
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 placeholder={`${homeworkTypes[activeTab].label} 내용을 입력하세요`}
-                rows={6}
+                rows={4}
+                className="text-sm resize-none"
               />
             </div>
             
             {/* 사진 업로드 */}
             <div>
-              <label className="text-sm font-medium mb-2 block">과제 사진</label>
+              <label className="text-xs sm:text-sm font-medium mb-2 block">과제 사진</label>
               <PhotoUpload 
                 onPhotoCapture={setPhoto}
                 capturedPhoto={photo}
@@ -284,8 +288,9 @@ const HomeworkSubmission = ({ student, onSubmissionUpdate }: HomeworkSubmissionP
             
             <Button 
               onClick={submitHomework} 
-              className="w-full" 
+              className="w-full text-sm" 
               disabled={submitting || !student?.id || todaySubmissions[activeTab] || !photo.trim()}
+              size="sm"
             >
               {submitting 
                 ? "제출 중..." 
@@ -296,7 +301,7 @@ const HomeworkSubmission = ({ student, onSubmissionUpdate }: HomeworkSubmissionP
             </Button>
             
             {todaySubmissions[activeTab] && (
-              <p className="text-sm text-muted-foreground text-center">
+              <p className="text-xs sm:text-sm text-muted-foreground text-center">
                 {homeworkTypes[activeTab].label}은 하루에 1편만 제출할 수 있습니다. 내일 다시 시도해주세요.
               </p>
             )}
@@ -305,43 +310,43 @@ const HomeworkSubmission = ({ student, onSubmissionUpdate }: HomeworkSubmissionP
       </div>
 
       {/* 진행상황 */}
-      <div className="space-y-4">
+      <div className="space-y-3 sm:space-y-4">
         <Card>
-          <CardHeader>
-            <CardTitle className="text-center">내 포인트</CardTitle>
+          <CardHeader className="pb-2 sm:pb-4">
+            <CardTitle className="text-center text-base sm:text-lg">내 포인트</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             <div className="text-center">
-              <div className="text-3xl font-bold text-primary">{getTotalPoints()}</div>
-              <div className="text-sm text-muted-foreground">총 포인트</div>
+              <div className="text-2xl sm:text-3xl font-bold text-primary">{getTotalPoints()}</div>
+              <div className="text-xs sm:text-sm text-muted-foreground">총 포인트</div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>진행 상황</CardTitle>
+          <CardHeader className="pb-2 sm:pb-4">
+            <CardTitle className="text-base sm:text-lg">진행 상황</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3 pt-0">
             {Object.entries(homeworkTypes).map(([key, type]) => {
               const Icon = type.icon;
               const count = getSubmissionCount(key);
               const progress = getProgress(key as any);
               
               return (
-                <div key={key} className="space-y-2">
+                <div key={key} className="space-y-1 sm:space-y-2">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Icon className="h-4 w-4" />
-                      <span className="text-sm font-medium">{type.label}</span>
+                    <div className="flex items-center gap-1 sm:gap-2">
+                      <Icon className="h-3 w-3 sm:h-4 sm:w-4" />
+                      <span className="text-xs sm:text-sm font-medium">{type.label}</span>
                     </div>
-                    <span className="text-sm text-muted-foreground">
+                    <span className="text-xs sm:text-sm text-muted-foreground">
                       {type.minRequired > 0 ? `${count}/${type.minRequired}` : count}
                     </span>
                   </div>
-                  <div className="w-full bg-muted rounded-full h-2">
+                  <div className="w-full bg-muted rounded-full h-1.5 sm:h-2">
                     <div
-                      className={`h-2 rounded-full transition-all duration-300 ${type.color}`}
+                      className={`h-1.5 sm:h-2 rounded-full transition-all duration-300 ${type.color}`}
                       style={{ width: `${progress}%` }}
                     />
                   </div>

@@ -200,27 +200,27 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-gradient-to-r from-primary to-accent text-primary-foreground py-4 sm:py-6">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3 min-w-0 flex-1">
-              <BookOpen className="h-6 w-6 sm:h-8 sm:w-8 flex-shrink-0" />
+      <header className="bg-gradient-to-r from-primary to-accent text-primary-foreground py-2 sm:py-3">
+        <div className="container mx-auto px-2 sm:px-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <BookOpen className="h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0" />
               <div className="min-w-0">
-                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold leading-tight">
+                <h1 className="text-lg sm:text-xl lg:text-2xl font-bold leading-tight">
                   여름방학 과제 포인트 시스템
                 </h1>
-                <p className="text-sm sm:text-base text-primary-foreground/90 leading-tight mt-1">
+                <p className="text-xs sm:text-sm text-primary-foreground/90 leading-tight hidden sm:block">
                   과제를 제출하고 포인트를 모아 랭킹에 도전해보세요!
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
+            <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
               <div className="text-left sm:text-right flex-1 sm:flex-initial">
-                <p className="text-xs sm:text-sm text-primary-foreground/80">접속 중</p>
-                <p className="font-semibold text-sm sm:text-base truncate">{getUserDisplayName()}</p>
+                <p className="text-xs text-primary-foreground/80 hidden sm:block">접속 중</p>
+                <p className="font-semibold text-xs sm:text-sm truncate">{getUserDisplayName()}</p>
                 {classroom && user && (
-                  <p className="text-xs sm:text-sm text-primary-foreground/80">
-                    학급 코드: {classroom.code}
+                  <p className="text-xs text-primary-foreground/80">
+                    {classroom.code}
                   </p>
                 )}
               </div>
@@ -229,10 +229,10 @@ const Index = () => {
                   variant="secondary" 
                   size="sm" 
                   onClick={handleLogout}
-                  className="flex items-center gap-2 flex-shrink-0"
+                  className="flex items-center gap-1 flex-shrink-0 px-2 py-1"
                 >
-                  <LogOut className="h-3 w-3 sm:h-4 sm:w-4" />
-                  <span className="hidden sm:inline">로그아웃</span>
+                  <LogOut className="h-3 w-3" />
+                  <span className="hidden sm:inline text-xs">로그아웃</span>
                 </Button>
               )}
             </div>
@@ -241,16 +241,16 @@ const Index = () => {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-2 sm:px-4 py-4 sm:py-6">
         {student && classroom ? (
           // Student View  
           <>
             <VacationInfo classroomId={classroom?.id} />
             
               {/* Content Grid */}
-            <div className="grid lg:grid-cols-3 gap-8">
+            <div className="grid lg:grid-cols-3 gap-4 sm:gap-6">
               {/* Homework Submission - Takes 2 columns */}
-              <div className="lg:col-span-2 space-y-8">
+              <div className="lg:col-span-2 space-y-4 sm:space-y-6">
                 <HomeworkSubmission 
                   student={student} 
                   onSubmissionUpdate={() => {
