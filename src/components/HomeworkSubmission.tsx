@@ -116,6 +116,15 @@ const HomeworkSubmission = ({ student, onSubmissionUpdate }: HomeworkSubmissionP
       return;
     }
 
+    if (!photo.trim()) {
+      toast({
+        title: "오류",
+        description: "과제 사진을 첨부해주세요.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (!student?.id) {
       toast({
         title: "오류",
@@ -276,7 +285,7 @@ const HomeworkSubmission = ({ student, onSubmissionUpdate }: HomeworkSubmissionP
             <Button 
               onClick={submitHomework} 
               className="w-full" 
-              disabled={submitting || !student?.id || todaySubmissions[activeTab]}
+              disabled={submitting || !student?.id || todaySubmissions[activeTab] || !photo.trim()}
             >
               {submitting 
                 ? "제출 중..." 

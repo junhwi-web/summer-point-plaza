@@ -69,8 +69,8 @@ const PhotoUpload = ({ onPhotoCapture, capturedPhoto }: PhotoUploadProps) => {
           <div className="space-y-3">
             <Image className="h-12 w-12 mx-auto text-muted-foreground" />
             <div>
-              <p className="text-sm font-medium">과제 사진을 첨부해주세요</p>
-              <p className="text-xs text-muted-foreground">일기장, 독후감, 자유과제 사진 등</p>
+              <p className="text-sm font-medium">과제 사진을 첨부해주세요 <span className="text-destructive">*</span></p>
+              <p className="text-xs text-muted-foreground">일기장, 독후감, 자유과제 사진 등 (필수)</p>
             </div>
           </div>
         )}
