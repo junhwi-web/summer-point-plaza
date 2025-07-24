@@ -14,26 +14,22 @@ interface StampCalendarProps {
 const StampCalendar = ({ submissions = [] }: StampCalendarProps) => {
   const [currentDate, setCurrentDate] = useState(new Date());
 
-  const getMonthData = (date: Date) => {
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const startDate = new Date(firstDay);
-    startDate.setDate(firstDay.getDate() - firstDay.getDay());
+  const getVacationData = () => {
+    const startDate = new Date(2025, 6, 27); // 7/27
+    const endDate = new Date(2025, 7, 18); // 8/18
     
     const days = [];
     const current = new Date(startDate);
     
-    for (let i = 0; i < 42; i++) {
+    while (current <= endDate) {
       days.push(new Date(current));
       current.setDate(current.getDate() + 1);
     }
     
-    return { days, firstDay, lastDay };
+    return { days, startDate, endDate };
   };
 
-  const { days, firstDay, lastDay } = getMonthData(currentDate);
+  const { days, startDate, endDate } = getVacationData();
 
   const getSubmissionsForDate = (date: Date) => {
     return submissions.filter(sub => 
@@ -44,11 +40,11 @@ const StampCalendar = ({ submissions = [] }: StampCalendarProps) => {
   const getStampIcon = (type: "diary" | "book-report" | "free-task") => {
     switch (type) {
       case "diary":
-        return <PenTool className="h-3 w-3 text-primary" />;
+        return <PenTool className="h-4 w-4 text-primary" />;
       case "book-report":
-        return <BookOpen className="h-3 w-3 text-accent" />;
+        return <BookOpen className="h-4 w-4 text-accent" />;
       case "free-task":
-        return <Star className="h-3 w-3 text-success" />;
+        return <Star className="h-4 w-4 text-success" />;
       default:
         return null;
     }
@@ -67,12 +63,8 @@ const StampCalendar = ({ submissions = [] }: StampCalendarProps) => {
     }
   };
 
-  const previousMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
-  };
-
-  const nextMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+  const isFinishLine = (date: Date) => {
+    return date.toDateString() === new Date(2025, 7, 18).toDateString(); // 8/18 개학일
   };
 
   const isToday = (date: Date) => {
@@ -80,26 +72,18 @@ const StampCalendar = ({ submissions = [] }: StampCalendarProps) => {
     return date.toDateString() === today.toDateString();
   };
 
-  const isCurrentMonth = (date: Date) => {
-    return date.getMonth() === currentDate.getMonth();
+  const isVacationPeriod = (date: Date) => {
+    return date >= startDate && date <= endDate;
   };
 
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">과제 제출 캘린더</CardTitle>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={previousMonth}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="text-sm font-medium min-w-[100px] text-center">
-              {currentDate.getFullYear()}년 {currentDate.getMonth() + 1}월
-            </span>
-            <Button variant="outline" size="sm" onClick={nextMonth}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
+        <div className="flex items-center justify-center">
+          <CardTitle className="text-2xl font-bold">방학 과제 캘린더 📅</CardTitle>
+        </div>
+        <div className="text-center text-sm text-muted-foreground mt-2">
+          2025년 7월 27일 ~ 8월 18일 (개학일)
         </div>
         
         {/* 범례 */}
@@ -136,43 +120,53 @@ const StampCalendar = ({ submissions = [] }: StampCalendarProps) => {
         </div>
         
         {/* 날짜 그리드 */}
-        <div className="grid grid-cols-7 gap-1">
+        <div className="grid grid-cols-7 gap-2">
           {days.map((day, index) => {
             const daySubmissions = getSubmissionsForDate(day);
-            const isCurrentMonthDay = isCurrentMonth(day);
+            const isVacationDay = isVacationPeriod(day);
             const isTodayDate = isToday(day);
+            const isFinishLineDay = isFinishLine(day);
             
             return (
               <div
                 key={index}
                 className={cn(
-                  "relative h-16 border rounded-md transition-colors p-1",
-                  !isCurrentMonthDay && "text-muted-foreground/40 bg-muted/20",
-                  isTodayDate && "bg-primary/10 border-primary",
-                  isCurrentMonthDay && !isTodayDate && "bg-card hover:bg-muted/30"
+                  "relative h-20 border-2 rounded-xl transition-all duration-200 p-2",
+                  isVacationDay ? "bg-gradient-to-br from-primary/5 to-accent/5 border-primary/20" : "bg-muted/10 border-muted/20",
+                  isTodayDate && "ring-2 ring-primary shadow-lg scale-105",
+                  isFinishLineDay && "bg-gradient-to-br from-yellow-100 to-orange-100 border-yellow-400 ring-2 ring-yellow-400"
                 )}
               >
                 {/* 날짜 숫자 - 왼쪽 위 */}
-                <div className="absolute top-1 left-1">
+                <div className="absolute top-1 left-2">
                   <span className={cn(
-                    "text-xs font-medium",
-                    isCurrentMonthDay ? "text-foreground" : "text-muted-foreground/40",
-                    isTodayDate && "text-primary font-semibold"
+                    "text-sm font-bold",
+                    isVacationDay ? "text-foreground" : "text-muted-foreground/50",
+                    isTodayDate && "text-primary text-base",
+                    isFinishLineDay && "text-orange-600"
                   )}>
                     {day.getDate()}
                   </span>
                 </div>
                 
-                {/* 스탬프들 - 가운데부터 배치 */}
+                {/* 개학일 특별 표시 */}
+                {isFinishLineDay && (
+                  <div className="absolute top-1 right-1">
+                    <span className="text-lg">🏁</span>
+                  </div>
+                )}
+                
+                {/* 스탬프들 - 중앙 배치 */}
                 {daySubmissions.length > 0 && (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="flex gap-0.5 flex-wrap justify-center max-w-full">
-                      {daySubmissions.map((submission, subIndex) => (
+                  <div className="absolute inset-2 flex items-center justify-center">
+                    <div className="flex gap-1 flex-wrap justify-center max-w-full">
+                      {daySubmissions.slice(0, 3).map((submission, subIndex) => (
                         <div
                           key={subIndex}
                           className={cn(
-                            "w-4 h-4 rounded-full border flex items-center justify-center",
-                            getStampBackground(submission.type)
+                            "w-7 h-7 rounded-full border-2 flex items-center justify-center shadow-md",
+                            getStampBackground(submission.type),
+                            "hover:scale-110 transition-transform"
                           )}
                           title={`${submission.type === 'diary' ? '일기' : submission.type === 'book-report' ? '독후감' : '자유과제'}`}
                         >
@@ -187,41 +181,29 @@ const StampCalendar = ({ submissions = [] }: StampCalendarProps) => {
           })}
         </div>
         
-        {/* 이번 달 통계 */}
-        <div className="mt-4 pt-4 border-t">
-          <div className="text-sm text-center text-muted-foreground">
-            이번 달 과제 제출 현황
+        {/* 방학 과제 통계 */}
+        <div className="mt-6 pt-4 border-t">
+          <div className="text-lg text-center font-bold text-primary mb-4">
+            🎯 방학 과제 현황
           </div>
-          <div className="flex justify-center gap-4 mt-2">
-            <div className="text-center">
-              <div className="text-lg font-bold text-primary">
-                {submissions.filter(s => 
-                  s.date.getMonth() === currentDate.getMonth() && 
-                  s.date.getFullYear() === currentDate.getFullYear() &&
-                  s.type === "diary"
-                ).length}
+          <div className="flex justify-center gap-6">
+            <div className="text-center bg-primary/10 rounded-xl p-3">
+              <div className="text-2xl font-bold text-primary">
+                {submissions.filter(s => s.type === "diary").length}
               </div>
-              <div className="text-xs text-muted-foreground">일기</div>
+              <div className="text-sm font-medium text-muted-foreground">일기 ✏️</div>
             </div>
-            <div className="text-center">
-              <div className="text-lg font-bold text-accent-foreground">
-                {submissions.filter(s => 
-                  s.date.getMonth() === currentDate.getMonth() && 
-                  s.date.getFullYear() === currentDate.getFullYear() &&
-                  s.type === "book-report"
-                ).length}
+            <div className="text-center bg-accent/10 rounded-xl p-3">
+              <div className="text-2xl font-bold text-accent-foreground">
+                {submissions.filter(s => s.type === "book-report").length}
               </div>
-              <div className="text-xs text-muted-foreground">독후감</div>
+              <div className="text-sm font-medium text-muted-foreground">독후감 📚</div>
             </div>
-            <div className="text-center">
-              <div className="text-lg font-bold text-success">
-                {submissions.filter(s => 
-                  s.date.getMonth() === currentDate.getMonth() && 
-                  s.date.getFullYear() === currentDate.getFullYear() &&
-                  s.type === "free-task"
-                ).length}
+            <div className="text-center bg-success/10 rounded-xl p-3">
+              <div className="text-2xl font-bold text-success">
+                {submissions.filter(s => s.type === "free-task").length}
               </div>
-              <div className="text-xs text-muted-foreground">자유과제</div>
+              <div className="text-sm font-medium text-muted-foreground">자유과제 ⭐</div>
             </div>
           </div>
         </div>

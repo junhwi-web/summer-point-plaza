@@ -1,139 +1,141 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Trophy, Medal, Award, Crown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface Student {
-  id: string;
+  id: number;
   name: string;
   points: number;
   rank: number;
-  level: number;
   completedTasks: number;
 }
 
 const RankingBoard = () => {
-  // 모의 데이터 - 실제로는 상태관리나 API에서 가져올 것
   const students: Student[] = [
-    { id: "1", name: "김민수", points: 120, rank: 1, level: 3, completedTasks: 8 },
-    { id: "2", name: "이지은", points: 105, rank: 2, level: 3, completedTasks: 7 },
-    { id: "3", name: "박준호", points: 95, rank: 3, level: 2, completedTasks: 6 },
-    { id: "4", name: "최서연", points: 85, rank: 4, level: 2, completedTasks: 5 },
-    { id: "5", name: "정민재", points: 75, rank: 5, level: 2, completedTasks: 5 },
-    { id: "6", name: "한소영", points: 65, rank: 6, level: 1, completedTasks: 4 },
-    { id: "7", name: "임태성", points: 55, rank: 7, level: 1, completedTasks: 3 },
-    { id: "8", name: "윤수빈", points: 45, rank: 8, level: 1, completedTasks: 3 },
+    { id: 1, name: "김민수", points: 250, rank: 1, completedTasks: 15 },
+    { id: 2, name: "이지은", points: 230, rank: 2, completedTasks: 14 },
+    { id: 3, name: "박준호", points: 210, rank: 3, completedTasks: 13 },
+    { id: 4, name: "최서연", points: 190, rank: 4, completedTasks: 12 },
+    { id: 5, name: "정우진", points: 170, rank: 5, completedTasks: 11 },
+    { id: 6, name: "한소영", points: 150, rank: 6, completedTasks: 10 },
+    { id: 7, name: "강도현", points: 130, rank: 7, completedTasks: 9 },
+    { id: 8, name: "윤채원", points: 110, rank: 8, completedTasks: 8 },
   ];
 
-  const getRankIcon = (rank: number) => {
+  const getRankDisplay = (rank: number) => {
     switch (rank) {
       case 1:
-        return <Crown className="h-5 w-5 text-yellow-500" />;
+        return (
+          <div className="flex flex-col items-center">
+            <div className="text-6xl">🥇</div>
+            <div className="text-lg font-bold text-yellow-600 font-heading">1등</div>
+          </div>
+        );
       case 2:
-        return <Trophy className="h-5 w-5 text-gray-400" />;
+        return (
+          <div className="flex flex-col items-center">
+            <div className="text-5xl">🥈</div>
+            <div className="text-base font-bold text-gray-500 font-heading">2등</div>
+          </div>
+        );
       case 3:
-        return <Medal className="h-5 w-5 text-amber-600" />;
+        return (
+          <div className="flex flex-col items-center">
+            <div className="text-4xl">🥉</div>
+            <div className="text-sm font-bold text-amber-600 font-heading">3등</div>
+          </div>
+        );
       default:
-        return <Award className="h-4 w-4 text-muted-foreground" />;
+        return (
+          <div className="flex items-center justify-center w-12 h-12 rounded-full bg-muted text-xl font-bold font-heading">
+            {rank}
+          </div>
+        );
     }
   };
 
   const getRankColor = (rank: number) => {
     switch (rank) {
       case 1:
-        return "bg-gradient-to-r from-yellow-400 to-yellow-600 text-white";
+        return "bg-gradient-to-r from-yellow-100 to-yellow-200 border-yellow-400 shadow-yellow-200";
       case 2:
-        return "bg-gradient-to-r from-gray-300 to-gray-500 text-white";
+        return "bg-gradient-to-r from-gray-100 to-gray-200 border-gray-400 shadow-gray-200";
       case 3:
-        return "bg-gradient-to-r from-amber-400 to-amber-600 text-white";
+        return "bg-gradient-to-r from-orange-100 to-orange-200 border-orange-400 shadow-orange-200";
       default:
-        return "bg-muted";
+        return "bg-card border-border";
     }
-  };
-
-  const getLevelBadgeColor = (level: number) => {
-    if (level >= 3) return "bg-success";
-    if (level >= 2) return "bg-primary";
-    return "bg-accent";
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Trophy className="h-5 w-5 text-primary" />
-          학급 랭킹
-        </CardTitle>
-        <p className="text-sm text-muted-foreground">
-          방학 과제 제출 포인트 기준 상위 랭킹
+        <CardTitle className="text-3xl font-bold text-center font-heading">🏆 학급 랭킹</CardTitle>
+        <p className="text-lg text-muted-foreground text-center font-body">
+          방학 과제를 열심히 해서 상위권에 올라보세요! 🎯
         </p>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          {students.map((student, index) => (
+      <CardContent className="space-y-4">
+        {/* 상위 3등 시상대 */}
+        <div className="grid grid-cols-3 gap-4 mb-8">
+          {students.slice(0, 3).map((student, index) => (
             <div
               key={student.id}
-              className={`flex items-center justify-between p-4 rounded-lg border transition-all duration-200 hover:shadow-md ${
-                student.rank <= 3 ? getRankColor(student.rank) : "bg-card"
-              }`}
+              className={cn(
+                "text-center p-4 rounded-2xl border-2 shadow-lg transition-all hover:scale-105",
+                getRankColor(student.rank),
+                index === 0 && "order-2 transform scale-110", // 1등을 가운데, 크게
+                index === 1 && "order-1", // 2등을 왼쪽
+                index === 2 && "order-3"  // 3등을 오른쪽
+              )}
             >
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 min-w-[40px]">
-                  {getRankIcon(student.rank)}
-                  <span className={`font-bold ${student.rank <= 3 ? "" : "text-muted-foreground"}`}>
-                    #{student.rank}
-                  </span>
-                </div>
-                
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="text-xs font-medium">
-                    {student.name.slice(0, 2)}
-                  </AvatarFallback>
-                </Avatar>
-                
-                <div>
-                  <div className={`font-medium ${student.rank <= 3 ? "" : "text-foreground"}`}>
-                    {student.name}
-                  </div>
-                  <div className={`text-xs ${student.rank <= 3 ? "text-white/80" : "text-muted-foreground"}`}>
-                    완료한 과제: {student.completedTasks}개
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <Badge 
-                  variant="outline" 
-                  className={`${getLevelBadgeColor(student.level)} text-white border-none`}
-                >
-                  Lv.{student.level}
-                </Badge>
-                <div className="text-right">
-                  <div className={`font-bold ${student.rank <= 3 ? "" : "text-primary"}`}>
-                    {student.points}pt
-                  </div>
-                </div>
-              </div>
+              {getRankDisplay(student.rank)}
+              <Avatar className="h-12 w-12 mx-auto mt-2 mb-2">
+                <AvatarFallback className="bg-primary/20 text-primary font-bold text-lg">
+                  {student.name[0]}
+                </AvatarFallback>
+              </Avatar>
+              <p className="font-bold text-lg font-heading">{student.name}</p>
+              <p className="text-2xl font-bold text-primary font-heading">{student.points}점</p>
+              <p className="text-sm text-muted-foreground font-body">
+                과제 {student.completedTasks}개 완료
+              </p>
             </div>
           ))}
         </div>
         
-        <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-          <h4 className="font-semibold text-sm mb-2 text-center">레벨 시스템</h4>
-          <div className="grid grid-cols-3 gap-2 text-xs text-center">
-            <div className="flex flex-col items-center gap-1">
-              <Badge className="bg-accent text-accent-foreground">Lv.1</Badge>
-              <span className="text-muted-foreground">0-49pt</span>
+        {/* 4등 이하 */}
+        <div className="space-y-3">
+          <h3 className="text-xl font-bold text-center mb-4 font-heading">나머지 순위</h3>
+          {students.slice(3).map((student) => (
+            <div
+              key={student.id}
+              className="flex items-center justify-between p-4 rounded-xl border-2 bg-card hover:bg-muted/30 transition-all"
+            >
+              <div className="flex items-center gap-4">
+                {getRankDisplay(student.rank)}
+                
+                <Avatar className="h-10 w-10">
+                  <AvatarFallback className="bg-primary/10 text-primary font-bold">
+                    {student.name[0]}
+                  </AvatarFallback>
+                </Avatar>
+                
+                <div>
+                  <p className="font-bold text-lg font-heading">{student.name}</p>
+                  <p className="text-sm text-muted-foreground font-body">
+                    과제 완료: {student.completedTasks}개
+                  </p>
+                </div>
+              </div>
+              
+              <div className="text-right">
+                <div className="text-xl font-bold text-primary font-heading">
+                  {student.points}점
+                </div>
+              </div>
             </div>
-            <div className="flex flex-col items-center gap-1">
-              <Badge className="bg-primary">Lv.2</Badge>
-              <span className="text-muted-foreground">50-99pt</span>
-            </div>
-            <div className="flex flex-col items-center gap-1">
-              <Badge className="bg-success">Lv.3</Badge>
-              <span className="text-muted-foreground">100pt+</span>
-            </div>
-          </div>
+          ))}
         </div>
       </CardContent>
     </Card>
