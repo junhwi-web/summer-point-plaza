@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
-import { Calendar, BookOpen, Clock, MessageSquare } from "lucide-react";
+import { Calendar, BookOpen, Clock, MessageSquare, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Notice {
@@ -17,6 +17,7 @@ interface VacationInfoProps {
 const VacationInfo = ({ classroomId }: VacationInfoProps) => {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [loading, setLoading] = useState(false);
+  const [expandedNotices, setExpandedNotices] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (classroomId) {
@@ -43,6 +44,19 @@ const VacationInfo = ({ classroomId }: VacationInfoProps) => {
       setLoading(false);
     }
   };
+
+  const toggleNoticeExpansion = (noticeId: string) => {
+    setExpandedNotices(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(noticeId)) {
+        newSet.delete(noticeId);
+      } else {
+        newSet.add(noticeId);
+      }
+      return newSet;
+    });
+  };
+
   return (
     <div className="space-y-3 mb-4 sm:mb-6">
       {/* Custom Notices */}
@@ -55,15 +69,40 @@ const VacationInfo = ({ classroomId }: VacationInfoProps) => {
             </div>
             
             <div className="max-h-32 sm:max-h-40 overflow-y-auto space-y-2">
-              {notices.map((notice) => (
-                <div key={notice.id} className="bg-white p-2 sm:p-3 rounded-lg border border-blue-100">
-                  <h3 className="font-semibold text-blue-800 mb-1 text-xs sm:text-sm">{notice.title}</h3>
-                  <p className="text-xs text-gray-700 whitespace-pre-wrap leading-relaxed line-clamp-2">{notice.content}</p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {new Date(notice.created_at).toLocaleDateString()}
-                  </p>
-                </div>
-              ))}
+              {notices.map((notice) => {
+                const isExpanded = expandedNotices.has(notice.id);
+                const shouldShowToggle = notice.content.length > 100; // 100자 이상일 때만 토글 버튼 표시
+                
+                return (
+                  <div key={notice.id} className="bg-white p-2 sm:p-3 rounded-lg border border-blue-100">
+                    <h3 className="font-semibold text-blue-800 mb-1 text-xs sm:text-sm">{notice.title}</h3>
+                    <p className={`text-xs text-gray-700 whitespace-pre-wrap leading-relaxed ${!isExpanded && shouldShowToggle ? 'line-clamp-2' : ''}`}>
+                      {notice.content}
+                    </p>
+                    {shouldShowToggle && (
+                      <button
+                        onClick={() => toggleNoticeExpansion(notice.id)}
+                        className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 mt-1 transition-colors"
+                      >
+                        {isExpanded ? (
+                          <>
+                            <span>접기</span>
+                            <ChevronUp className="h-3 w-3" />
+                          </>
+                        ) : (
+                          <>
+                            <span>전체보기</span>
+                            <ChevronDown className="h-3 w-3" />
+                          </>
+                        )}
+                      </button>
+                    )}
+                    <p className="text-xs text-gray-500 mt-1">
+                      {new Date(notice.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </Card>
