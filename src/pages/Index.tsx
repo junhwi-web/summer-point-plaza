@@ -7,6 +7,9 @@ import StampCalendar from "@/components/StampCalendar";
 import AdminDashboard from "@/components/AdminDashboard";
 import { BookOpen, Users, Target, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
 import { useToast } from "@/hooks/use-toast";
@@ -241,11 +244,84 @@ const Index = () => {
             <AdminDashboard classroom={classroom} onGenerateNewCode={handleGenerateNewCode} />
           </>
         ) : user && !classroom ? (
-          // Admin View but no classroom yet - show loading or create classroom prompt
+          // Admin View but no classroom yet - show create classroom form
           <>
             <VacationInfo />
-            <div className="text-center py-8">
-              <p>학급 정보를 불러오는 중...</p>
+            <div className="max-w-md mx-auto">
+              <Card>
+                <CardHeader>
+                  <CardTitle>학급 만들기</CardTitle>
+                  <CardDescription>
+                    새로운 학급을 생성해주세요
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={async (e) => {
+                    e.preventDefault();
+                    const formData = new FormData(e.currentTarget);
+                    const name = formData.get('classroomName') as string;
+                    
+                    if (!name.trim()) return;
+                    
+                    try {
+                      console.log("Creating classroom with name:", name);
+                      
+                      // Generate class code
+                      const classCode = Array(5).fill(0).map(() => String.fromCharCode(65 + Math.floor(Math.random() * 26))).join('');
+                      console.log("Generated class code:", classCode);
+
+                      // Create classroom
+                      const { data: newClassroom, error } = await supabase
+                        .from('classrooms')
+                        .insert({
+                          code: classCode,
+                          name: name,
+                          teacher_email: user.email
+                        })
+                        .select()
+                        .single();
+
+                      if (error) {
+                        console.error("Error creating classroom:", error);
+                        toast({
+                          title: "오류 발생",
+                          description: error.message,
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+
+                      console.log("Classroom created successfully:", newClassroom);
+                      setClassroom(newClassroom);
+                      toast({
+                        title: "학급 생성 완료",
+                        description: `학급 코드: ${classCode}`,
+                      });
+                    } catch (error: any) {
+                      console.error('Error creating classroom:', error);
+                      toast({
+                        title: "오류 발생",
+                        description: error.message,
+                        variant: "destructive",
+                      });
+                    }
+                  }} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="classroomName">학급명</Label>
+                      <Input
+                        id="classroomName"
+                        name="classroomName"
+                        type="text"
+                        placeholder="학급명을 입력하세요"
+                        required
+                      />
+                    </div>
+                    <Button type="submit" className="w-full">
+                      학급 만들기
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
             </div>
           </>
         ) : (
