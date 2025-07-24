@@ -36,39 +36,44 @@ const Index = () => {
           if (pendingClassroomName) {
             try {
               console.log("Creating classroom with name:", pendingClassroomName);
-              // Generate class code
-              const response = await supabase.rpc('generate_class_code');
-              const classCode = response.data;
+              
+              // 1. Generate class code
+              console.log("Step 1: Generating class code...");
+              const codeResponse = await supabase.rpc('generate_class_code');
+              console.log("RPC response:", codeResponse);
+              
+              if (codeResponse.error) {
+                console.error("Error generating class code:", codeResponse.error);
+                return;
+              }
+              
+              const classCode = codeResponse.data;
               console.log("Generated class code:", classCode);
 
-              // Create classroom
-              const { error: classroomError } = await supabase
+              // 2. Create classroom
+              console.log("Step 2: Creating classroom in database...");
+              const insertData = {
+                code: classCode,
+                name: pendingClassroomName,
+                teacher_email: session.user.email
+              };
+              console.log("Insert data:", insertData);
+              
+              const { data: insertResult, error: classroomError } = await supabase
                 .from('classrooms')
-                .insert({
-                  code: classCode,
-                  name: pendingClassroomName,
-                  teacher_email: session.user.email
-                });
+                .insert(insertData)
+                .select()
+                .single();
 
-              if (!classroomError) {
-                console.log("Classroom created successfully");
-                localStorage.removeItem('pendingClassroomName');
-                // Fetch the created classroom
-                const { data: newClassroom } = await supabase
-                  .from('classrooms')
-                  .select('*')
-                  .eq('teacher_email', session.user.email)
-                  .maybeSingle();
-                
-                if (newClassroom) {
-                  console.log("Setting classroom:", newClassroom);
-                  setClassroom(newClassroom);
-                } else {
-                  console.log("No classroom found after creation");
-                }
-              } else {
+              if (classroomError) {
                 console.error("Error creating classroom:", classroomError);
+                return;
               }
+
+              console.log("Classroom created successfully:", insertResult);
+              setClassroom(insertResult);
+              localStorage.removeItem('pendingClassroomName');
+              
             } catch (error) {
               console.error('Error creating classroom:', error);
             }
