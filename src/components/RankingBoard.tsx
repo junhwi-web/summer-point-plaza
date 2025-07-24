@@ -90,12 +90,7 @@ const RankingBoard = () => {
               )}
             >
               {getRankDisplay(student.rank)}
-              <Avatar className="h-12 w-12 mx-auto mt-2 mb-2">
-                <AvatarFallback className="bg-primary/20 text-primary font-bold text-lg">
-                  {student.name[0]}
-                </AvatarFallback>
-              </Avatar>
-              <p className="font-bold text-lg font-heading">{student.name}</p>
+              <p className="font-bold text-lg font-heading mt-4">{student.name}</p>
               <p className="text-2xl font-bold text-primary font-heading">{student.points}점</p>
               <p className="text-sm text-muted-foreground font-body">
                 과제 {student.completedTasks}개 완료
@@ -114,12 +109,6 @@ const RankingBoard = () => {
             >
               <div className="flex items-center gap-4">
                 {getRankDisplay(student.rank)}
-                
-                <Avatar className="h-10 w-10">
-                  <AvatarFallback className="bg-primary/10 text-primary font-bold">
-                    {student.name[0]}
-                  </AvatarFallback>
-                </Avatar>
                 
                 <div>
                   <p className="font-bold text-lg font-heading">{student.name}</p>

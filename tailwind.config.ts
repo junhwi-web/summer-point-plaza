@@ -19,8 +19,8 @@ export default {
 		},
       extend: {
         fontFamily: {
-          'dongle': ['Dongle', 'sans-serif'],
-          'gaegu': ['Gaegu', 'cursive'],
+          'heading': ['Noto Sans KR', 'sans-serif'],
+          'body': ['Noto Sans KR', 'sans-serif'],
         },
         colors: {
 				border: 'hsl(var(--border))',

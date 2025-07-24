@@ -29,7 +29,7 @@ const HomeworkSubmission = () => {
   const homeworkTypes = {
     diary: { icon: PenTool, label: "일기 쓰기", points: 10, color: "bg-primary", minRequired: 3 },
     "book-report": { icon: BookOpen, label: "독후감 쓰기", points: 15, color: "bg-accent", minRequired: 3 },
-    "free-task": { icon: Star, label: "자유 과제", points: 20, color: "bg-success", minRequired: 0 }
+    "free-task": { icon: Star, label: "자유 과제", points: 5, color: "bg-success", minRequired: 0 }
   };
 
   const submitHomework = () => {
