@@ -78,10 +78,31 @@ const Index = () => {
     );
 
     // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       console.log("Initial session check:", session?.user?.email);
       setSession(session);
       setUser(session?.user ?? null);
+      
+      // If user exists, try to fetch their existing classroom
+      if (session?.user?.email) {
+        console.log("Fetching existing classroom for:", session.user.email);
+        try {
+          const { data: existingClassroom, error } = await supabase
+            .from('classrooms')
+            .select('*')
+            .eq('teacher_email', session.user.email)
+            .maybeSingle();
+            
+          if (existingClassroom) {
+            console.log("Found existing classroom:", existingClassroom);
+            setClassroom(existingClassroom);
+          } else {
+            console.log("No existing classroom found for this teacher");
+          }
+        } catch (error) {
+          console.error("Error fetching classroom:", error);
+        }
+      }
     });
 
     // Check for student session
