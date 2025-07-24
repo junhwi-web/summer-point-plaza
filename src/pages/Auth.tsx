@@ -30,7 +30,7 @@ const Auth = () => {
     try {
       if (isSignUp) {
         // Sign up teacher
-        const { data, error } = await supabase.auth.signUp({
+        const { error } = await supabase.auth.signUp({
           email: teacherEmail,
           password: teacherPassword,
           options: {
@@ -40,26 +40,13 @@ const Auth = () => {
 
         if (error) throw error;
 
-        if (data.user) {
-          // Create classroom with random code
-          const response = await supabase.rpc('generate_class_code');
-          const classCode = response.data;
+        // Store classroom name in localStorage for after login
+        localStorage.setItem('pendingClassroomName', classroomName);
 
-          const { error: classroomError } = await supabase
-            .from('classrooms')
-            .insert({
-              code: classCode,
-              name: classroomName,
-              teacher_email: teacherEmail
-            });
-
-          if (classroomError) throw classroomError;
-
-          toast({
-            title: "회원가입 성공",
-            description: `학급 코드: ${classCode}`,
-          });
-        }
+        toast({
+          title: "회원가입 성공",
+          description: "이메일을 확인하고 로그인해주세요.",
+        });
       } else {
         // Sign in teacher
         const { error } = await supabase.auth.signInWithPassword({

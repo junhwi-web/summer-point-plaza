@@ -19,9 +19,46 @@ const Index = () => {
   useEffect(() => {
     // Check for authentication state
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
+        
+        // If user just logged in and there's a pending classroom
+        if (session?.user && event === 'SIGNED_IN') {
+          const pendingClassroomName = localStorage.getItem('pendingClassroomName');
+          if (pendingClassroomName) {
+            try {
+              // Generate class code
+              const response = await supabase.rpc('generate_class_code');
+              const classCode = response.data;
+
+              // Create classroom
+              const { error: classroomError } = await supabase
+                .from('classrooms')
+                .insert({
+                  code: classCode,
+                  name: pendingClassroomName,
+                  teacher_email: session.user.email
+                });
+
+              if (!classroomError) {
+                localStorage.removeItem('pendingClassroomName');
+                // Fetch the created classroom
+                const { data: newClassroom } = await supabase
+                  .from('classrooms')
+                  .select('*')
+                  .eq('teacher_email', session.user.email)
+                  .single();
+                
+                if (newClassroom) {
+                  setClassroom(newClassroom);
+                }
+              }
+            } catch (error) {
+              console.error('Error creating classroom:', error);
+            }
+          }
+        }
       }
     );
 
