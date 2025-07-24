@@ -11,7 +11,18 @@ interface AdminDashboardProps {
 const AdminDashboard = ({ classroom, onGenerateNewCode }: AdminDashboardProps) => {
   const { toast } = useToast();
 
+  // Don't render if classroom is null
+  if (!classroom) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground">학급 정보를 불러오는 중...</p>
+      </div>
+    );
+  }
+
   const handleCopyCode = () => {
+    if (!classroom?.code) return;
+    
     navigator.clipboard.writeText(classroom.code);
     toast({
       title: "학급 코드 복사됨",

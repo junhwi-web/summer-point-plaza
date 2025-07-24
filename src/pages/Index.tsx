@@ -58,11 +58,13 @@ const Index = () => {
                   .from('classrooms')
                   .select('*')
                   .eq('teacher_email', session.user.email)
-                  .single();
+                  .maybeSingle();
                 
                 if (newClassroom) {
                   console.log("Setting classroom:", newClassroom);
                   setClassroom(newClassroom);
+                } else {
+                  console.log("No classroom found after creation");
                 }
               } else {
                 console.error("Error creating classroom:", classroomError);
@@ -124,8 +126,8 @@ const Index = () => {
   };
 
   const getUserDisplayName = () => {
-    if (student) {
-      return `${student.name} (${classroom?.name})`;
+    if (student && classroom) {
+      return `${student.name} (${classroom.name})`;
     }
     if (user?.email) {
       return user.email;
@@ -214,11 +216,19 @@ const Index = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        {user ? (
-          // Admin View
+        {user && classroom ? (
+          // Admin View - only show if both user and classroom exist
           <>
             <VacationInfo />
             <AdminDashboard classroom={classroom} onGenerateNewCode={handleGenerateNewCode} />
+          </>
+        ) : user && !classroom ? (
+          // Admin View but no classroom yet - show loading or create classroom prompt
+          <>
+            <VacationInfo />
+            <div className="text-center py-8">
+              <p>학급 정보를 불러오는 중...</p>
+            </div>
           </>
         ) : (
           // Student View  

@@ -90,7 +90,7 @@ const Auth = () => {
         .from('classrooms')
         .select('*')
         .eq('code', classCode.toUpperCase())
-        .single();
+        .maybeSingle();
 
       if (classroomError || !classroom) {
         throw new Error("학급 코드를 찾을 수 없습니다.");
@@ -102,7 +102,7 @@ const Auth = () => {
         .select('*')
         .eq('name', studentName)
         .eq('classroom_id', classroom.id)
-        .single();
+        .maybeSingle();
 
       if (studentError && studentError.code !== 'PGRST116') {
         throw studentError;
