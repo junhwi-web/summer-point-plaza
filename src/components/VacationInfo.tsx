@@ -46,7 +46,7 @@ const VacationInfo = ({ classroomId }: VacationInfoProps) => {
   return (
     <div className="space-y-4 mb-8">
       {/* Custom Notices */}
-      {notices.length > 0 && (
+      {notices.length > 0 ? (
         <Card className="w-full p-4 sm:p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200">
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-4">
@@ -67,88 +67,26 @@ const VacationInfo = ({ classroomId }: VacationInfoProps) => {
             </div>
           </div>
         </Card>
-      )}
-
-      {/* Default Vacation Info */}
-      <Card className="w-full p-4 sm:p-6 bg-gradient-to-r from-primary/10 to-accent/10 border-2 border-primary/20">
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 mb-4">
-            <Calendar className="h-5 w-5 sm:h-6 sm:w-6 text-primary flex-shrink-0" />
-            <h2 className="text-lg sm:text-xl font-bold text-primary">여름방학 안내</h2>
-          </div>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 text-sm">
-            <div className="space-y-3">
-              <div className="flex items-start gap-2">
-                <Clock className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
-                <div className="min-w-0">
-                  <span className="font-semibold text-primary block mb-1">방학 기간:</span>
-                  <p className="text-foreground text-xs sm:text-sm leading-relaxed">
-                    2025. 7. 26.(토) ~ 2025. 8. 17.(일)<br className="sm:hidden" />
-                    <span className="sm:inline"> (공휴일 포함 23일간)</span>
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex items-start gap-2">
-                <BookOpen className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
-                <div className="min-w-0">
-                  <span className="font-semibold text-primary block mb-1">개학하는 날:</span>
-                  <p className="text-foreground text-xs sm:text-sm leading-relaxed">
-                    2025. 8. 18.(월) 8시 30분까지 등교<br className="sm:hidden" />
-                    <span className="sm:inline">, 5교시 수업, 급식 실시</span>
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex items-start gap-2">
-                <div className="h-4 w-4 bg-primary rounded-full mt-1 flex-shrink-0"></div>
-                <div className="min-w-0">
-                  <span className="font-semibold text-primary block mb-1">개학 날 준비물:</span>
-                  <p className="text-foreground text-xs sm:text-sm leading-relaxed">
-                    실내화, 방학 과제물, 필기도구, 물통<br />
-                    <span className="text-xs text-muted-foreground">(2학기 교과서는 개학날 배부함)</span>
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex items-start gap-2">
-                <div className="h-4 w-4 bg-accent rounded-full mt-1 flex-shrink-0"></div>
-                <div className="min-w-0">
-                  <span className="font-semibold text-accent-foreground block mb-1">국기 다는 날:</span>
-                  <p className="text-foreground text-xs sm:text-sm">2025. 8. 15.(금) 광복절</p>
-                </div>
-              </div>
+      ) : (
+        <Card className="w-full p-4 sm:p-6 bg-gradient-to-r from-primary/10 to-accent/10 border-2 border-primary/20">
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 mb-4">
+              <MessageSquare className="h-5 w-5 sm:h-6 sm:w-6 text-primary flex-shrink-0" />
+              <h2 className="text-lg sm:text-xl font-bold text-primary">공지사항</h2>
             </div>
             
-            <div className="space-y-3">
-              <div className="bg-card p-3 rounded-lg border border-primary/10">
-                <span className="font-semibold text-primary text-xs block mb-2">◉ 유상학습형 늘봄(방과후 학교):</span>
-                <p className="text-xs text-foreground leading-relaxed">
-                  8. 4.(월) ~ 8. 14.(목)<br />
-                  유상학습형 늘봄 방학 7. 28.(월) ~ 8. 1.(금)
-                </p>
-              </div>
-              
-              <div className="bg-card p-3 rounded-lg border border-primary/10">
-                <span className="font-semibold text-primary text-xs block mb-2">◉ 학교도서관 개방:</span>
-                <p className="text-xs text-foreground leading-relaxed">
-                  월~금(공휴일 제외), 09:00 ~ 15:00<br />
-                  도서관 휴관일 8. 4.(월)
-                </p>
-              </div>
-              
-              <div className="bg-accent/20 p-3 rounded-lg border border-accent/30">
-                <span className="font-semibold text-accent-foreground text-xs block mb-2">◉ 우리집 책몰이:</span>
-                <p className="text-xs text-foreground leading-relaxed">
-                  가족과 함께 책 읽고 대화하는<br />
-                  "우리집 책몰이"(책에 몰입하는 20분) 실천하기
-                </p>
-              </div>
+            <div className="text-center py-8">
+              <MessageSquare className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground text-sm sm:text-base">
+                아직 등록된 공지사항이 없습니다.
+              </p>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-2">
+                선생님이 공지사항을 등록하면 여기에 표시됩니다.
+              </p>
             </div>
           </div>
-        </div>
-      </Card>
+        </Card>
+      )}
     </div>
   );
 };
