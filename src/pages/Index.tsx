@@ -199,24 +199,26 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-gradient-to-r from-primary to-accent text-primary-foreground py-6">
+      <header className="bg-gradient-to-r from-primary to-accent text-primary-foreground py-4 sm:py-6">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <BookOpen className="h-8 w-8" />
-              <div>
-                <h1 className="text-3xl font-bold">여름방학 과제 포인트 시스템</h1>
-                <p className="text-primary-foreground/90">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <BookOpen className="h-6 w-6 sm:h-8 sm:w-8 flex-shrink-0" />
+              <div className="min-w-0">
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold leading-tight">
+                  여름방학 과제 포인트 시스템
+                </h1>
+                <p className="text-sm sm:text-base text-primary-foreground/90 leading-tight mt-1">
                   과제를 제출하고 포인트를 모아 랭킹에 도전해보세요!
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <p className="text-sm text-primary-foreground/80">접속 중</p>
-                <p className="font-semibold">{getUserDisplayName()}</p>
+            <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
+              <div className="text-left sm:text-right flex-1 sm:flex-initial">
+                <p className="text-xs sm:text-sm text-primary-foreground/80">접속 중</p>
+                <p className="font-semibold text-sm sm:text-base truncate">{getUserDisplayName()}</p>
                 {classroom && user && (
-                  <p className="text-sm text-primary-foreground/80">
+                  <p className="text-xs sm:text-sm text-primary-foreground/80">
                     학급 코드: {classroom.code}
                   </p>
                 )}
@@ -225,10 +227,10 @@ const Index = () => {
                 variant="secondary" 
                 size="sm" 
                 onClick={handleLogout}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 flex-shrink-0"
               >
-                <LogOut className="h-4 w-4" />
-                로그아웃
+                <LogOut className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">로그아웃</span>
               </Button>
             </div>
           </div>
