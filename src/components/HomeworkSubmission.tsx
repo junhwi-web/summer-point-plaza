@@ -172,7 +172,6 @@ const HomeworkSubmission = ({ student, studentProfile, studentAuth, onSubmission
       // For sessionStorage-based auth, save to database instead of localStorage
       if (studentAuth) {
         // Find student in students table first
-        console.log('Looking for student:', studentAuth.name, 'in classroom:', studentAuth.classroomId);
         const { data: studentData, error: studentError } = await supabase
           .from('students')
           .select('*')
@@ -180,10 +179,7 @@ const HomeworkSubmission = ({ student, studentProfile, studentAuth, onSubmission
           .eq('classroom_id', studentAuth.classroomId)
           .single();
 
-        console.log('Student query result:', { studentData, studentError });
-
         if (studentError || !studentData) {
-          console.error('Student not found:', studentError);
           toast({
             title: "학생 정보 오류",
             description: "학생 정보를 찾을 수 없습니다. 다시 로그인해주세요.",
@@ -193,7 +189,6 @@ const HomeworkSubmission = ({ student, studentProfile, studentAuth, onSubmission
         }
 
         // Save homework to database
-        console.log('Submitting homework for student:', studentData.id);
         const { data, error } = await supabase
           .from('homework_submissions')
           .insert({

@@ -34,13 +34,10 @@ const RankingBoard = ({ classroom, currentStudent }: RankingBoardProps) => {
       setLoading(true);
 
       // Fetch all students in the classroom
-      console.log('Fetching students for classroom:', classroom.id);
       const { data: studentsData, error: studentsError } = await supabase
         .from('students')
         .select('id, name')
         .eq('classroom_id', classroom.id);
-
-      console.log('Students query result:', { studentsData, studentsError });
 
       if (studentsError) {
         console.error('Error fetching students:', studentsError);
@@ -50,16 +47,11 @@ const RankingBoard = ({ classroom, currentStudent }: RankingBoardProps) => {
       // Fetch submissions for all students
       const studentRankings: Student[] = [];
 
-      console.log('Processing students:', studentsData);
-
       for (const student of studentsData || []) {
-        console.log('Fetching submissions for student:', student.id, student.name);
         const { data: submissions, error: submissionsError } = await supabase
           .from('homework_submissions')
           .select('points')
           .eq('student_id', student.id);
-
-        console.log('Submissions for', student.name, ':', { submissions, submissionsError });
 
         if (submissionsError) {
           console.error('Error fetching submissions for student:', student.id, submissionsError);
