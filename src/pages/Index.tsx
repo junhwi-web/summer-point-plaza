@@ -18,7 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 const Index = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [student, setStudent] = useState<any>(null);
+  const [studentProfile, setStudentProfile] = useState<any>(null);
   const [classroom, setClassroom] = useState<any>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -31,125 +31,101 @@ const Index = () => {
         setSession(session);
         setUser(session?.user ?? null);
         
-        // If user just logged in and there's a pending classroom
-        if (session?.user && event === 'SIGNED_IN') {
-          console.log("User signed in, checking for pending classroom");
-          const pendingClassroomName = localStorage.getItem('pendingClassroomName');
-          console.log("Pending classroom name:", pendingClassroomName);
+        if (session?.user) {
+          // Check if this is a student profile
+          const { data: studentData } = await supabase
+            .from('student_profiles')
+            .select('*, classrooms(*)')
+            .eq('id', session.user.id)
+            .single();
           
-          if (pendingClassroomName) {
-            try {
-              console.log("Creating classroom with name:", pendingClassroomName);
-              
-              // 1. Generate class code directly
-              console.log("Step 1: Generating class code...");
-              const classCode = Array(5).fill(0).map(() => String.fromCharCode(65 + Math.floor(Math.random() * 26))).join('');
-              console.log("Generated class code:", classCode);
+          if (studentData) {
+            // This is a student
+            setStudentProfile(studentData);
+            setClassroom(studentData.classrooms);
+          } else {
+            // This is a teacher, check for pending classroom creation
+            if (event === 'SIGNED_IN') {
+              const pendingClassroomName = localStorage.getItem('pendingClassroomName');
+              if (pendingClassroomName) {
+                try {
+                  const classCode = Array(5).fill(0).map(() => String.fromCharCode(65 + Math.floor(Math.random() * 26))).join('');
+                  const { data: insertResult, error: classroomError } = await supabase
+                    .from('classrooms')
+                    .insert({
+                      code: classCode,
+                      name: pendingClassroomName,
+                      teacher_email: session.user.email
+                    })
+                    .select()
+                    .single();
 
-              // 2. Create classroom
-              console.log("Step 2: Creating classroom in database...");
-              const insertData = {
-                code: classCode,
-                name: pendingClassroomName,
-                teacher_email: session.user.email
-              };
-              console.log("Insert data:", insertData);
-              
-              const { data: insertResult, error: classroomError } = await supabase
-                .from('classrooms')
-                .insert(insertData)
-                .select()
-                .single();
-
-              if (classroomError) {
-                console.error("Error creating classroom:", classroomError);
-                return;
+                  if (!classroomError) {
+                    setClassroom(insertResult);
+                    localStorage.removeItem('pendingClassroomName');
+                  }
+                } catch (error) {
+                  console.error('Error creating classroom:', error);
+                }
               }
-
-              console.log("Classroom created successfully:", insertResult);
-              setClassroom(insertResult);
-              localStorage.removeItem('pendingClassroomName');
-              
-            } catch (error) {
-              console.error('Error creating classroom:', error);
             }
+            
+            // Try to fetch existing classroom for teacher
+            try {
+              const { data: existingClassroom } = await supabase
+                .from('classrooms')
+                .select('*')
+                .eq('teacher_email', session.user.email)
+                .maybeSingle();
+                
+              if (existingClassroom) {
+                setClassroom(existingClassroom);
+              }
+            } catch (error) {
+              console.error("Error fetching classroom:", error);
+            }
+            
+            setStudentProfile(null);
           }
+        } else {
+          setClassroom(null);
+          setStudentProfile(null);
         }
       }
     );
 
     // Check for existing session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      console.log("Initial session check:", session?.user?.email);
+    supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      
-      // If user exists, try to fetch their existing classroom
-      if (session?.user?.email) {
-        console.log("Fetching existing classroom for:", session.user.email);
-        try {
-          const { data: existingClassroom, error } = await supabase
-            .from('classrooms')
-            .select('*')
-            .eq('teacher_email', session.user.email)
-            .maybeSingle();
-            
-          if (existingClassroom) {
-            console.log("Found existing classroom:", existingClassroom);
-            setClassroom(existingClassroom);
-          } else {
-            console.log("No existing classroom found for this teacher");
-          }
-        } catch (error) {
-          console.error("Error fetching classroom:", error);
-        }
-      }
     });
-
-    // Check for student session
-    const studentData = sessionStorage.getItem('student');
-    const classroomData = sessionStorage.getItem('classroom');
-    
-    if (studentData && classroomData) {
-      setStudent(JSON.parse(studentData));
-      setClassroom(JSON.parse(classroomData));
-    }
 
     return () => subscription.unsubscribe();
   }, []);
 
-  // Redirect to auth if no user or student is logged in
+  // Redirect to auth if no user is logged in
   useEffect(() => {
-    console.log("Checking auth state - user:", user?.email, "student:", student?.name);
-    
-    // Don't redirect immediately, give some time for auth state to load
     const timer = setTimeout(() => {
-      if (!user && !student) {
-        console.log("No user or student found after timeout, redirecting to /auth");
+      if (!user) {
         navigate('/auth');
-      } else {
-        console.log("User authenticated, staying on main page");
       }
     }, 1000); // Wait 1 second
 
     return () => clearTimeout(timer);
-  }, [user, student, navigate]);
+  }, [user, navigate]);
 
   const handleLogout = async () => {
-    if (user) {
-      await supabase.auth.signOut();
-    }
-    
-    // Clear student session
-    sessionStorage.removeItem('student');
-    sessionStorage.removeItem('classroom');
-    
+    await supabase.auth.signOut();
+    setUser(null);
+    setSession(null);
+    setClassroom(null);
+    setStudentProfile(null);
     navigate('/auth');
   };
 
   const getUserDisplayName = () => {
-    if (student && classroom) {
-      return `${student.name} (${classroom.name})`;
+    if (studentProfile && classroom) {
+      return `${studentProfile.name} (${classroom.name})`;
     }
     if (user?.email) {
       return user.email;
@@ -186,7 +162,7 @@ const Index = () => {
   };
 
   // Show loading while checking auth state
-  if (!user && !student) {
+  if (!user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -224,17 +200,15 @@ const Index = () => {
                   </p>
                 )}
               </div>
-              {user && !student && (
-                <Button 
-                  variant="secondary" 
-                  size="sm" 
-                  onClick={handleLogout}
-                  className="flex items-center gap-1 flex-shrink-0 px-2 py-1"
-                >
-                  <LogOut className="h-3 w-3" />
-                  <span className="hidden sm:inline text-xs">로그아웃</span>
-                </Button>
-              )}
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                onClick={handleLogout}
+                className="flex items-center gap-1 flex-shrink-0 px-2 py-1"
+              >
+                <LogOut className="h-3 w-3" />
+                <span className="hidden sm:inline text-xs">로그아웃</span>
+              </Button>
             </div>
           </div>
         </div>
@@ -242,7 +216,7 @@ const Index = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-2 sm:px-4 py-4 sm:py-6">
-        {student && classroom ? (
+        {studentProfile && classroom ? (
           // Student View  
           <>
             <VacationInfo classroomId={classroom?.id} />
@@ -252,7 +226,7 @@ const Index = () => {
               {/* Homework Submission - Takes 2 columns */}
               <div className="lg:col-span-2 space-y-4 sm:space-y-6">
                 <HomeworkSubmission 
-                  student={student} 
+                  studentProfile={studentProfile} 
                   onSubmissionUpdate={() => {
                     // Trigger re-fetch of data in other components
                     window.location.reload(); // Simple solution for now
@@ -261,7 +235,7 @@ const Index = () => {
                 
                 {/* Homework List */}
                 <HomeworkList 
-                  student={student}
+                  studentProfile={studentProfile}
                   onUpdate={() => {
                     // Trigger re-fetch of data in other components
                     window.location.reload(); // Simple solution for now
@@ -269,12 +243,12 @@ const Index = () => {
                 />
                 
                 {/* Stamp Calendar */}
-                <StampCalendar student={student} />
+                <StampCalendar studentProfile={studentProfile} />
               </div>
               
               {/* Ranking Board - Takes 1 column */}
               <div>
-                <RankingBoard classroom={classroom} currentStudent={student} />
+                <RankingBoard classroom={classroom} currentStudent={studentProfile} />
               </div>
             </div>
 

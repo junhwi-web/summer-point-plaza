@@ -7,13 +7,16 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface StampCalendarProps {
   student?: { id: string; name: string };
+  studentProfile?: { id: string; name: string };
   submissions?: Array<{
     date: Date;
     type: "diary" | "book-report" | "free-task";
   }>;
 }
 
-const StampCalendar = ({ student, submissions = [] }: StampCalendarProps) => {
+const StampCalendar = ({ student, studentProfile, submissions = [] }: StampCalendarProps) => {
+  // Use studentProfile if available, fallback to student for backward compatibility
+  const currentStudent = studentProfile || student;
   const [currentDate, setCurrentDate] = useState(new Date());
   const [realSubmissions, setRealSubmissions] = useState<Array<{
     date: Date;
@@ -21,19 +24,19 @@ const StampCalendar = ({ student, submissions = [] }: StampCalendarProps) => {
   }>>([]);
 
   useEffect(() => {
-    if (student?.id) {
+    if (currentStudent?.id) {
       fetchSubmissions();
     }
-  }, [student?.id]);
+  }, [currentStudent?.id]);
 
   const fetchSubmissions = async () => {
-    if (!student?.id) return;
+    if (!currentStudent?.id) return;
 
     try {
       const { data, error } = await supabase
         .from('homework_submissions')
         .select('homework_type, submitted_at')
-        .eq('student_id', student.id);
+        .eq('student_id', currentStudent.id);
 
       if (error) {
         console.error('Error fetching submissions:', error);
@@ -52,7 +55,7 @@ const StampCalendar = ({ student, submissions = [] }: StampCalendarProps) => {
   };
 
   // Use real submissions if student is logged in, otherwise use props
-  const activeSubmissions = student?.id ? realSubmissions : submissions;
+  const activeSubmissions = currentStudent?.id ? realSubmissions : submissions;
 
   const getVacationData = () => {
     const startDate = new Date(2025, 6, 27); // 7/27

@@ -29,10 +29,13 @@ interface Homework {
 
 interface HomeworkListProps {
   student?: { id: string; name: string };
+  studentProfile?: { id: string; name: string };
   onUpdate?: () => void;
 }
 
-const HomeworkList = ({ student, onUpdate }: HomeworkListProps) => {
+const HomeworkList = ({ student, studentProfile, onUpdate }: HomeworkListProps) => {
+  // Use studentProfile if available, fallback to student for backward compatibility
+  const currentStudent = studentProfile || student;
   const [homeworks, setHomeworks] = useState<Homework[]>([]);
   const [editingHomework, setEditingHomework] = useState<Homework | null>(null);
   const [deletingHomework, setDeletingHomework] = useState<Homework | null>(null);
@@ -46,20 +49,20 @@ const HomeworkList = ({ student, onUpdate }: HomeworkListProps) => {
   };
 
   useEffect(() => {
-    if (student?.id) {
+    if (currentStudent?.id) {
       fetchHomeworks();
     }
-  }, [student?.id]);
+  }, [currentStudent?.id]);
 
   const fetchHomeworks = async () => {
-    if (!student?.id) return;
+    if (!currentStudent?.id) return;
 
     setLoading(true);
     try {
       const { data, error } = await supabase
         .from('homework_submissions')
         .select('*')
-        .eq('student_id', student.id)
+        .eq('student_id', currentStudent.id)
         .order('submitted_at', { ascending: false });
 
       if (error) {

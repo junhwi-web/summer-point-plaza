@@ -21,10 +21,13 @@ interface Homework {
 
 interface HomeworkSubmissionProps {
   student?: { id: string; name: string };
+  studentProfile?: { id: string; name: string };
   onSubmissionUpdate?: () => void;
 }
 
-const HomeworkSubmission = ({ student, onSubmissionUpdate }: HomeworkSubmissionProps) => {
+const HomeworkSubmission = ({ student, studentProfile, onSubmissionUpdate }: HomeworkSubmissionProps) => {
+  // Use studentProfile if available, fallback to student for backward compatibility
+  const currentStudent = studentProfile || student;
   const [homeworks, setHomeworks] = useState<Homework[]>([]);
   const [activeTab, setActiveTab] = useState<"diary" | "book-report" | "free-task">("diary");
   const [title, setTitle] = useState("");
@@ -35,20 +38,20 @@ const HomeworkSubmission = ({ student, onSubmissionUpdate }: HomeworkSubmissionP
   const { toast } = useToast();
 
   useEffect(() => {
-    if (student?.id) {
+    if (currentStudent?.id) {
       fetchHomeworks();
       checkTodaySubmissions();
     }
-  }, [student?.id]);
+  }, [currentStudent?.id]);
 
   const fetchHomeworks = async () => {
-    if (!student?.id) return;
+    if (!currentStudent?.id) return;
 
     try {
       const { data, error } = await supabase
         .from('homework_submissions')
         .select('*')
-        .eq('student_id', student.id)
+        .eq('student_id', currentStudent.id)
         .order('submitted_at', { ascending: false });
 
       if (error) {
@@ -72,7 +75,7 @@ const HomeworkSubmission = ({ student, onSubmissionUpdate }: HomeworkSubmissionP
   };
 
   const checkTodaySubmissions = async () => {
-    if (!student?.id) return;
+    if (!currentStudent?.id) return;
 
     const today = new Date().toISOString().split('T')[0];
     
@@ -80,7 +83,7 @@ const HomeworkSubmission = ({ student, onSubmissionUpdate }: HomeworkSubmissionP
       const { data, error } = await supabase
         .from('homework_submissions')
         .select('homework_type')
-        .eq('student_id', student.id)
+        .eq('student_id', currentStudent.id)
         .gte('submitted_at', `${today}T00:00:00.000Z`)
         .lt('submitted_at', `${today}T23:59:59.999Z`);
 
@@ -126,7 +129,7 @@ const HomeworkSubmission = ({ student, onSubmissionUpdate }: HomeworkSubmissionP
       return;
     }
 
-    if (!student?.id) {
+    if (!currentStudent?.id) {
       toast({
         title: "오류",
         description: "학생 정보를 찾을 수 없습니다.",
@@ -151,7 +154,7 @@ const HomeworkSubmission = ({ student, onSubmissionUpdate }: HomeworkSubmissionP
       const { data, error } = await supabase
         .from('homework_submissions')
         .insert({
-          student_id: student.id,
+          student_id: currentStudent.id,
           homework_type: activeTab,
           points: homeworkTypes[activeTab].points,
           title: title.trim(),
@@ -297,7 +300,7 @@ const HomeworkSubmission = ({ student, onSubmissionUpdate }: HomeworkSubmissionP
             <Button 
               onClick={submitHomework} 
               className="w-full text-sm" 
-              disabled={submitting || !student?.id || todaySubmissions[activeTab] || (homeworkTypes[activeTab].photoRequired && !photo.trim())}
+              disabled={submitting || !currentStudent?.id || todaySubmissions[activeTab] || (homeworkTypes[activeTab].photoRequired && !photo.trim())}
               size="sm"
             >
               {submitting 

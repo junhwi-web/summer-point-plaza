@@ -19,9 +19,12 @@ const Auth = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [classroomName, setClassroomName] = useState("");
 
-  // Student login state
+  // Student auth state
+  const [studentEmail, setStudentEmail] = useState("");
+  const [studentPassword, setStudentPassword] = useState("");
   const [studentName, setStudentName] = useState("");
   const [classCode, setClassCode] = useState("");
+  const [isStudentSignUp, setIsStudentSignUp] = useState(false);
 
   const handleTeacherAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,62 +83,82 @@ const Auth = () => {
     }
   };
 
-  const handleStudentLogin = async (e: React.FormEvent) => {
+  const handleStudentAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      // Find classroom by code
-      const { data: classroom, error: classroomError } = await supabase
-        .from('classrooms')
-        .select('*')
-        .eq('code', classCode.toUpperCase())
-        .maybeSingle();
-
-      if (classroomError || !classroom) {
-        throw new Error("학급 코드를 찾을 수 없습니다.");
-      }
-
-      // Check if student already exists
-      let { data: student, error: studentError } = await supabase
-        .from('students')
-        .select('*')
-        .eq('name', studentName)
-        .eq('classroom_id', classroom.id)
-        .maybeSingle();
-
-      if (studentError && studentError.code !== 'PGRST116') {
-        throw studentError;
-      }
-
-      // Create student if doesn't exist
-      if (!student) {
-        const { data: newStudent, error: createError } = await supabase
-          .from('students')
-          .insert({
-            name: studentName,
-            classroom_id: classroom.id
-          })
-          .select()
+      if (isStudentSignUp) {
+        // Find classroom by code first
+        const { data: classroom, error: classroomError } = await supabase
+          .from("classrooms")
+          .select("*")
+          .eq("code", classCode.toUpperCase())
           .single();
 
-        if (createError) throw createError;
-        student = newStudent;
+        if (classroomError || !classroom) {
+          throw new Error("유효하지 않은 반 코드입니다.");
+        }
+
+        // Sign up the student
+        const { data: authData, error: signUpError } = await supabase.auth.signUp({
+          email: studentEmail,
+          password: studentPassword,
+          options: {
+            emailRedirectTo: `${window.location.origin}/`,
+            data: {
+              name: studentName,
+              classroom_id: classroom.id
+            }
+          }
+        });
+
+        if (signUpError) {
+          throw new Error(signUpError.message);
+        }
+
+        if (authData.user) {
+          // Create student profile
+          const { error: profileError } = await supabase
+            .from("student_profiles")
+            .insert({
+              id: authData.user.id,
+              name: studentName,
+              classroom_id: classroom.id,
+            });
+
+          if (profileError) {
+            throw new Error("학생 프로필 생성에 실패했습니다.");
+          }
+
+          toast({
+            title: "회원가입 성공",
+            description: `안녕하세요, ${studentName}님! 로그인되었습니다.`,
+          });
+
+          navigate("/", { replace: true });
+        }
+      } else {
+        // Sign in the student
+        const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
+          email: studentEmail,
+          password: studentPassword,
+        });
+
+        if (signInError) {
+          throw new Error("이메일 또는 비밀번호가 올바르지 않습니다.");
+        }
+
+        toast({
+          title: "로그인 성공",
+          description: `환영합니다!`,
+        });
+
+        navigate("/", { replace: true });
       }
-
-      // Store student info in session storage for now
-      sessionStorage.setItem('student', JSON.stringify(student));
-      sessionStorage.setItem('classroom', JSON.stringify(classroom));
-
-      toast({
-        title: "로그인 성공",
-        description: `안녕하세요, ${studentName}님!`,
-      });
-
-      navigate("/", { replace: true });
     } catch (error: any) {
       toast({
-        title: "로그인 실패",
+        title: isStudentSignUp ? "회원가입 실패" : "로그인 실패",
         description: error.message,
         variant: "destructive",
       });
@@ -167,33 +190,78 @@ const Auth = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleStudentLogin} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="classCode">학급 코드</Label>
+                <div className="flex items-center justify-center space-x-2 mb-4">
+                  <Button
+                    type="button"
+                    variant={!isStudentSignUp ? "default" : "outline"}
+                    onClick={() => setIsStudentSignUp(false)}
+                    size="sm"
+                  >
+                    로그인
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={isStudentSignUp ? "default" : "outline"}
+                    onClick={() => setIsStudentSignUp(true)}
+                    size="sm"
+                  >
+                    회원가입
+                  </Button>
+                </div>
+                <form onSubmit={handleStudentAuth} className="space-y-4">
+                  <div>
+                    <Label htmlFor="studentEmail">이메일</Label>
                     <Input
-                      id="classCode"
-                      type="text"
-                      value={classCode}
-                      onChange={(e) => setClassCode(e.target.value)}
-                      placeholder="5자리 영문자 입력"
-                      maxLength={5}
+                      id="studentEmail"
+                      type="email"
+                      placeholder="이메일을 입력하세요"
+                      value={studentEmail}
+                      onChange={(e) => setStudentEmail(e.target.value)}
                       required
-                      className="uppercase"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="studentName">이름</Label>
+                  <div>
+                    <Label htmlFor="studentPassword">비밀번호</Label>
                     <Input
-                      id="studentName"
-                      type="text"
-                      value={studentName}
-                      onChange={(e) => setStudentName(e.target.value)}
-                      placeholder="이름을 입력하세요"
+                      id="studentPassword"
+                      type="password"
+                      placeholder="비밀번호를 입력하세요"
+                      value={studentPassword}
+                      onChange={(e) => setStudentPassword(e.target.value)}
                       required
+                      minLength={6}
                     />
                   </div>
+                  {isStudentSignUp && (
+                    <>
+                      <div>
+                        <Label htmlFor="studentName">이름</Label>
+                        <Input
+                          id="studentName"
+                          type="text"
+                          placeholder="이름을 입력하세요"
+                          value={studentName}
+                          onChange={(e) => setStudentName(e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="classCode">반 코드</Label>
+                        <Input
+                          id="classCode"
+                          type="text"
+                          placeholder="5자리 반 코드를 입력하세요"
+                          value={classCode}
+                          onChange={(e) => setClassCode(e.target.value)}
+                          required
+                          maxLength={5}
+                          className="uppercase"
+                        />
+                      </div>
+                    </>
+                  )}
                   <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? "로그인 중..." : "로그인"}
+                    {isLoading ? (isStudentSignUp ? "회원가입 중..." : "로그인 중...") : (isStudentSignUp ? "회원가입" : "로그인")}
                   </Button>
                 </form>
               </CardContent>
