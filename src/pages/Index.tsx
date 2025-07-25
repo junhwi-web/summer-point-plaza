@@ -35,8 +35,6 @@ const Index = () => {
           name: parsedData.classroomName,
           code: parsedData.classCode
         });
-        // Clear any existing Supabase session for students
-        supabase.auth.signOut();
         return; // Don't check Supabase auth if student is logged in
       } catch (error) {
         // Invalid student auth data, remove it
@@ -44,6 +42,7 @@ const Index = () => {
       }
     }
 
+    // Only set up Supabase auth listener if no student auth
     // Check for authentication state (teachers only)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -100,9 +99,9 @@ const Index = () => {
           setUser(session?.user ?? null);
         }
       });
-    }
 
-    return () => subscription?.unsubscribe();
+      return () => subscription?.unsubscribe();
+    }
   }, []);
 
   // Redirect to auth if no user is logged in (and no student auth)

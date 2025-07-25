@@ -85,16 +85,18 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
-      // Clear any existing Supabase session first
-      await supabase.auth.signOut();
-      // Find classroom by code first
-      const { data: classroom, error: classroomError } = await supabase
-        .from("classrooms")
-        .select("*")
-        .eq("code", classCode.toUpperCase())
-        .maybeSingle();
+      // Find classroom by code first (public access, no auth needed)
+      const response = await fetch(`https://rcombszhlvafzpkfhooe.supabase.co/rest/v1/classrooms?select=*&code=eq.${classCode.toUpperCase()}`, {
+        headers: {
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJjb21ic3pobHZhZnpwa2Zob29lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMzMDY5MjcsImV4cCI6MjA2ODg4MjkyN30.KOreS5iaoH9MlTI5rt-lfu01vjQXKXRisPEUteGmTjo',
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const classrooms = await response.json();
+      const classroom = classrooms && classrooms.length > 0 ? classrooms[0] : null;
 
-      if (classroomError || !classroom) {
+      if (!classroom) {
         throw new Error("유효하지 않은 반 코드입니다.");
       }
 
