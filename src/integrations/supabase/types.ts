@@ -41,6 +41,99 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_rankings: {
+        Row: {
+          classroom_id: string
+          created_at: string
+          game_date: string
+          id: string
+          rank_position: number
+          score: number
+          student_id: string
+        }
+        Insert: {
+          classroom_id: string
+          created_at?: string
+          game_date?: string
+          id?: string
+          rank_position: number
+          score: number
+          student_id: string
+        }
+        Update: {
+          classroom_id?: string
+          created_at?: string
+          game_date?: string
+          id?: string
+          rank_position?: number
+          score?: number
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_rankings_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_rankings_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      game_sessions: {
+        Row: {
+          classroom_id: string
+          correct_answers: number
+          created_at: string
+          game_date: string
+          id: string
+          score: number
+          student_id: string
+          total_questions: number
+        }
+        Insert: {
+          classroom_id: string
+          correct_answers?: number
+          created_at?: string
+          game_date?: string
+          id?: string
+          score?: number
+          student_id: string
+          total_questions?: number
+        }
+        Update: {
+          classroom_id?: string
+          correct_answers?: number
+          created_at?: string
+          game_date?: string
+          id?: string
+          score?: number
+          student_id?: string
+          total_questions?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_sessions_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_sessions_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       homework_submissions: {
         Row: {
           content: string | null
@@ -51,6 +144,7 @@ export type Database = {
           student_id: string
           submitted_at: string
           title: string | null
+          user_id: string | null
         }
         Insert: {
           content?: string | null
@@ -61,6 +155,7 @@ export type Database = {
           student_id: string
           submitted_at?: string
           title?: string | null
+          user_id?: string | null
         }
         Update: {
           content?: string | null
@@ -71,6 +166,7 @@ export type Database = {
           student_id?: string
           submitted_at?: string
           title?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -120,6 +216,62 @@ export type Database = {
           },
         ]
       }
+      plants: {
+        Row: {
+          created_at: string
+          id: string
+          image_url: string
+          name: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image_url: string
+          name: string
+          type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_url?: string
+          name?: string
+          type?: string
+        }
+        Relationships: []
+      }
+      student_profiles: {
+        Row: {
+          classroom_id: string | null
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          classroom_id?: string | null
+          created_at?: string
+          id: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          classroom_id?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_profiles_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       students: {
         Row: {
           classroom_id: string
@@ -152,6 +304,36 @@ export type Database = {
           },
         ]
       }
+      teachers: {
+        Row: {
+          classroom_code: string
+          created_at: string
+          email: string
+          id: string
+          password_hash: string
+          updated_at: string
+          username: string
+        }
+        Insert: {
+          classroom_code: string
+          created_at?: string
+          email: string
+          id?: string
+          password_hash: string
+          updated_at?: string
+          username: string
+        }
+        Update: {
+          classroom_code?: string
+          created_at?: string
+          email?: string
+          id?: string
+          password_hash?: string
+          updated_at?: string
+          username?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -160,6 +342,14 @@ export type Database = {
       generate_class_code: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      is_teacher: {
+        Args: { user_email: string }
+        Returns: boolean
+      }
+      update_daily_rankings: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
     }
     Enums: {
