@@ -169,22 +169,61 @@ const HomeworkSubmission = ({ student, studentProfile, studentAuth, onSubmission
     setSubmitting(true);
 
     try {
-      // For sessionStorage-based auth, save to localStorage
+      // For sessionStorage-based auth, save to database instead of localStorage
       if (studentAuth) {
+        // Find student profile first
+        const { data: studentProfile, error: studentError } = await supabase
+          .from('student_profiles')
+          .select('*')
+          .eq('name', studentAuth.name)
+          .eq('classroom_id', studentAuth.classroomId)
+          .single();
+
+        if (studentError || !studentProfile) {
+          toast({
+            title: "학생 정보 오류",
+            description: "학생 정보를 찾을 수 없습니다.",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        // Save homework to database
+        const { data, error } = await supabase
+          .from('homework_submissions')
+          .insert({
+            student_id: studentProfile.id,
+            homework_type: activeTab,
+            points: homeworkTypes[activeTab].points,
+            title: title.trim(),
+            content: content.trim(),
+            photo: photo,
+            user_id: studentProfile.id
+          })
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Error submitting homework:', error);
+          toast({
+            title: "제출 실패",
+            description: "과제 제출 중 오류가 발생했습니다.",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        // Also save to localStorage for backwards compatibility
         const newHomework: Homework = {
-          id: `hw_${Date.now()}`,
+          id: data.id,
           type: activeTab,
           title: title.trim(),
           content: content.trim(),
           photo: photo,
-          submittedAt: new Date(),
-          points: homeworkTypes[activeTab].points
+          submittedAt: new Date(data.submitted_at),
+          points: data.points
         };
 
-        // Update local state
-        setHomeworks([newHomework, ...homeworks]);
-        
-        // Save to localStorage
         const today = new Date().toISOString().split('T')[0];
         const submissionsKey = `submissions_${studentAuth.name}_${today}`;
         const homeworksKey = `homeworks_${studentAuth.name}`;
@@ -194,10 +233,11 @@ const HomeworkSubmission = ({ student, studentProfile, studentAuth, onSubmission
         localStorage.setItem(submissionsKey, JSON.stringify(newTodaySubmissions));
         setTodaySubmissions(newTodaySubmissions);
         
-        // Save homework
+        // Save homework to localStorage
         const existingHomeworks = JSON.parse(localStorage.getItem(homeworksKey) || '[]');
         localStorage.setItem(homeworksKey, JSON.stringify([newHomework, ...existingHomeworks]));
         
+        setHomeworks([newHomework, ...homeworks]);
         setTitle("");
         setContent("");
         setPhoto("");
