@@ -33,42 +33,66 @@ const Index = () => {
         
         if (session?.user) {
           // Check if this is a student profile
-          const { data: studentData } = await supabase
-            .from('student_profiles')
-            .select('*, classrooms(*)')
-            .eq('id', session.user.id)
-            .single();
-          
-          if (studentData) {
-            // This is a student
-            setStudentProfile(studentData);
-            setClassroom(studentData.classrooms);
-          } else {
-            // This is a teacher, check for pending classroom creation
-            if (event === 'SIGNED_IN') {
-              const pendingClassroomName = localStorage.getItem('pendingClassroomName');
-              if (pendingClassroomName) {
-                try {
-                  const classCode = Array(5).fill(0).map(() => String.fromCharCode(65 + Math.floor(Math.random() * 26))).join('');
-                  const { data: insertResult, error: classroomError } = await supabase
-                    .from('classrooms')
-                    .insert({
-                      code: classCode,
-                      name: pendingClassroomName,
-                      teacher_email: session.user.email
-                    })
-                    .select()
-                    .single();
+          try {
+            const { data: studentData, error: studentError } = await supabase
+              .from('student_profiles')
+              .select('*, classrooms(*)')
+              .eq('id', session.user.id)
+              .maybeSingle();
+            
+            if (studentData && !studentError) {
+              // This is a student
+              setStudentProfile(studentData);
+              setClassroom(studentData.classrooms);
+            } else {
+              // This is a teacher
+              setStudentProfile(null);
+              
+              // Check for pending classroom creation
+              if (event === 'SIGNED_IN') {
+                const pendingClassroomName = localStorage.getItem('pendingClassroomName');
+                if (pendingClassroomName) {
+                  try {
+                    const classCode = Array(5).fill(0).map(() => String.fromCharCode(65 + Math.floor(Math.random() * 26))).join('');
+                    const { data: insertResult, error: classroomError } = await supabase
+                      .from('classrooms')
+                      .insert({
+                        code: classCode,
+                        name: pendingClassroomName,
+                        teacher_email: session.user.email
+                      })
+                      .select()
+                      .single();
 
-                  if (!classroomError) {
-                    setClassroom(insertResult);
-                    localStorage.removeItem('pendingClassroomName');
+                    if (!classroomError) {
+                      setClassroom(insertResult);
+                      localStorage.removeItem('pendingClassroomName');
+                    }
+                  } catch (error) {
+                    console.error('Error creating classroom:', error);
                   }
-                } catch (error) {
-                  console.error('Error creating classroom:', error);
                 }
               }
+              
+              // Try to fetch existing classroom for teacher
+              try {
+                const { data: existingClassroom } = await supabase
+                  .from('classrooms')
+                  .select('*')
+                  .eq('teacher_email', session.user.email)
+                  .maybeSingle();
+                  
+                if (existingClassroom) {
+                  setClassroom(existingClassroom);
+                }
+              } catch (error) {
+                console.error("Error fetching classroom:", error);
+              }
             }
+          } catch (error) {
+            console.error("Error checking student profile:", error);
+            // If there's an error checking student profile, assume this is a teacher
+            setStudentProfile(null);
             
             // Try to fetch existing classroom for teacher
             try {
@@ -84,8 +108,6 @@ const Index = () => {
             } catch (error) {
               console.error("Error fetching classroom:", error);
             }
-            
-            setStudentProfile(null);
           }
         } else {
           setClassroom(null);
@@ -115,12 +137,30 @@ const Index = () => {
   }, [user, navigate]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setSession(null);
-    setClassroom(null);
-    setStudentProfile(null);
-    navigate('/auth');
+    try {
+      console.log("Starting logout...");
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error("Logout error:", error);
+        throw error;
+      }
+      
+      console.log("Logout successful, clearing state...");
+      setUser(null);
+      setSession(null);
+      setClassroom(null);
+      setStudentProfile(null);
+      
+      console.log("Navigating to auth page...");
+      navigate('/auth', { replace: true });
+    } catch (error: any) {
+      console.error("Error during logout:", error);
+      toast({
+        title: "로그아웃 오류",
+        description: error.message || "로그아웃 중 오류가 발생했습니다.",
+        variant: "destructive",
+      });
+    }
   };
 
   const getUserDisplayName = () => {
