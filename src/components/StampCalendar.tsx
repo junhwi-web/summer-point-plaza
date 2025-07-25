@@ -26,7 +26,7 @@ const StampCalendar = ({ student, studentProfile, studentAuth, submissions = [] 
 
   useEffect(() => {
     fetchSubmissions();
-  }, [studentAuth?.name, currentStudent?.id]);
+  }, [studentAuth?.name, currentStudent]);
 
   const fetchSubmissions = async () => {
     // For sessionStorage-based auth, fetch from localStorage
@@ -44,7 +44,7 @@ const StampCalendar = ({ student, studentProfile, studentAuth, submissions = [] 
     }
 
     // For database-based auth
-    if (!currentStudent?.id) return;
+    if (!currentStudent || !('id' in currentStudent)) return;
 
     try {
       const { data, error } = await supabase
@@ -69,7 +69,7 @@ const StampCalendar = ({ student, studentProfile, studentAuth, submissions = [] 
   };
 
   // Use real submissions if student is logged in, otherwise use props
-  const activeSubmissions = (studentAuth || currentStudent?.id) ? realSubmissions : submissions;
+  const activeSubmissions = (studentAuth || (currentStudent && 'id' in currentStudent)) ? realSubmissions : submissions;
 
   const getVacationData = () => {
     const startDate = new Date(2025, 6, 27); // 7/27

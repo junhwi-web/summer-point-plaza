@@ -39,11 +39,11 @@ const HomeworkSubmission = ({ student, studentProfile, studentAuth, onSubmission
   const { toast } = useToast();
 
   useEffect(() => {
-    if (studentAuth?.name || currentStudent?.id) {
+    if (studentAuth?.name || (currentStudent && 'id' in currentStudent)) {
       fetchHomeworks();
       checkTodaySubmissions();
     }
-  }, [studentAuth?.name, currentStudent?.id]);
+  }, [studentAuth?.name, currentStudent]);
 
   const fetchHomeworks = async () => {
     // For sessionStorage-based auth, we don't fetch from database
@@ -52,7 +52,7 @@ const HomeworkSubmission = ({ student, studentProfile, studentAuth, onSubmission
       return;
     }
     
-    if (!currentStudent?.id) return;
+    if (!currentStudent || !('id' in currentStudent)) return;
 
     try {
       const { data, error } = await supabase
@@ -93,7 +93,7 @@ const HomeworkSubmission = ({ student, studentProfile, studentAuth, onSubmission
       return;
     }
     
-    if (!currentStudent?.id) return;
+    if (!currentStudent || !('id' in currentStudent)) return;
 
     const today = new Date().toISOString().split('T')[0];
     
@@ -147,7 +147,7 @@ const HomeworkSubmission = ({ student, studentProfile, studentAuth, onSubmission
       return;
     }
 
-    if (!currentStudent?.id && !studentAuth?.name) {
+    if (!currentStudent?.name && !studentAuth?.name) {
       toast({
         title: "오류",
         description: "학생 정보를 찾을 수 없습니다.",
@@ -216,7 +216,7 @@ const HomeworkSubmission = ({ student, studentProfile, studentAuth, onSubmission
       const { data, error } = await supabase
         .from('homework_submissions')
         .insert({
-          student_id: currentStudent.id,
+          student_id: (currentStudent as any).id,
           homework_type: activeTab,
           points: homeworkTypes[activeTab].points,
           title: title.trim(),
@@ -362,7 +362,7 @@ const HomeworkSubmission = ({ student, studentProfile, studentAuth, onSubmission
             <Button 
               onClick={submitHomework} 
               className="w-full text-sm" 
-              disabled={submitting || (!currentStudent?.id && !studentAuth?.name) || todaySubmissions[activeTab] || (homeworkTypes[activeTab].photoRequired && !photo.trim())}
+              disabled={submitting || (!currentStudent?.name && !studentAuth?.name) || todaySubmissions[activeTab] || (homeworkTypes[activeTab].photoRequired && !photo.trim())}
               size="sm"
             >
               {submitting 

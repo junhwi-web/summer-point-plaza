@@ -51,7 +51,7 @@ const HomeworkList = ({ student, studentProfile, studentAuth, onUpdate }: Homewo
 
   useEffect(() => {
     fetchHomeworks();
-  }, [studentAuth?.name, currentStudent?.id]);
+  }, [studentAuth?.name, currentStudent]);
 
   const fetchHomeworks = async () => {
     setLoading(true);
@@ -67,7 +67,7 @@ const HomeworkList = ({ student, studentProfile, studentAuth, onUpdate }: Homewo
       }
 
       // For database-based auth
-      if (!currentStudent?.id) {
+      if (!currentStudent || !('id' in currentStudent)) {
         setLoading(false);
         return;
       }
