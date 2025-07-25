@@ -68,7 +68,7 @@ const Auth = () => {
       }
 
       console.log("About to navigate to /");
-      navigate("/");
+      navigate("/", { replace: true });
     } catch (error: any) {
       toast({
         title: "오류 발생",
@@ -132,7 +132,7 @@ const Auth = () => {
         description: `안녕하세요, ${studentName}님!`,
       });
 
-      navigate("/");
+      navigate("/", { replace: true });
     } catch (error: any) {
       toast({
         title: "로그인 실패",
