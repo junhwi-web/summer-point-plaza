@@ -90,7 +90,7 @@ const Auth = () => {
         .from("classrooms")
         .select("*")
         .eq("code", classCode.toUpperCase())
-        .single();
+        .maybeSingle();
 
       if (classroomError || !classroom) {
         throw new Error("유효하지 않은 반 코드입니다.");
