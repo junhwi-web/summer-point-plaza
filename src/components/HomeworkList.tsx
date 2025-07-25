@@ -61,7 +61,12 @@ const HomeworkList = ({ student, studentProfile, studentAuth, onUpdate }: Homewo
       if (studentAuth) {
         const homeworksKey = `homeworks_${studentAuth.name}`;
         const existingHomeworks = JSON.parse(localStorage.getItem(homeworksKey) || '[]');
-        setHomeworks(existingHomeworks);
+        // Convert submittedAt strings back to Date objects
+        const formattedHomeworks = existingHomeworks.map((hw: any) => ({
+          ...hw,
+          submittedAt: new Date(hw.submittedAt)
+        }));
+        setHomeworks(formattedHomeworks);
         setLoading(false);
         return;
       }
