@@ -171,34 +171,39 @@ const HomeworkSubmission = ({ student, studentProfile, studentAuth, onSubmission
     try {
       // For sessionStorage-based auth, save to database instead of localStorage
       if (studentAuth) {
-        // Find student profile first
-        const { data: studentProfile, error: studentError } = await supabase
-          .from('student_profiles')
+        // Find student in students table first
+        console.log('Looking for student:', studentAuth.name, 'in classroom:', studentAuth.classroomId);
+        const { data: studentData, error: studentError } = await supabase
+          .from('students')
           .select('*')
           .eq('name', studentAuth.name)
           .eq('classroom_id', studentAuth.classroomId)
           .single();
 
-        if (studentError || !studentProfile) {
+        console.log('Student query result:', { studentData, studentError });
+
+        if (studentError || !studentData) {
+          console.error('Student not found:', studentError);
           toast({
             title: "학생 정보 오류",
-            description: "학생 정보를 찾을 수 없습니다.",
+            description: "학생 정보를 찾을 수 없습니다. 다시 로그인해주세요.",
             variant: "destructive"
           });
           return;
         }
 
         // Save homework to database
+        console.log('Submitting homework for student:', studentData.id);
         const { data, error } = await supabase
           .from('homework_submissions')
           .insert({
-            student_id: studentProfile.id,
+            student_id: studentData.id,
             homework_type: activeTab,
             points: homeworkTypes[activeTab].points,
             title: title.trim(),
             content: content.trim(),
             photo: photo,
-            user_id: studentProfile.id
+            user_id: studentData.id
           })
           .select()
           .single();
@@ -207,7 +212,7 @@ const HomeworkSubmission = ({ student, studentProfile, studentAuth, onSubmission
           console.error('Error submitting homework:', error);
           toast({
             title: "제출 실패",
-            description: "과제 제출 중 오류가 발생했습니다.",
+            description: "과제 제출 중 오류가 발생했습니다. 다시 시도해주세요.",
             variant: "destructive"
           });
           return;
