@@ -20,6 +20,7 @@ const Index = () => {
   const [user, setUser] = useState<User | null>(null);
   const [studentAuth, setStudentAuth] = useState<any>(null);
   const [classroom, setClassroom] = useState<any>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -251,29 +252,29 @@ const Index = () => {
               {/* Homework Submission - Takes 2 columns */}
               <div className="lg:col-span-2 space-y-4 sm:space-y-6">
                 <HomeworkSubmission 
+                  key={`homework-submission-${refreshKey}`}
                   studentAuth={studentAuth} 
                   onSubmissionUpdate={() => {
-                    // Trigger re-fetch of data in other components
-                    window.location.reload(); // Simple solution for now
+                    setRefreshKey(prev => prev + 1);
                   }} 
                 />
                 
                 {/* Homework List */}
                 <HomeworkList 
+                  key={`homework-list-${refreshKey}`}
                   studentAuth={studentAuth}
                   onUpdate={() => {
-                    // Trigger re-fetch of data in other components
-                    window.location.reload(); // Simple solution for now
+                    setRefreshKey(prev => prev + 1);
                   }}
                 />
                 
                 {/* Stamp Calendar */}
-                <StampCalendar studentAuth={studentAuth} />
+                <StampCalendar key={`stamp-calendar-${refreshKey}`} studentAuth={studentAuth} />
               </div>
               
               {/* Ranking Board - Takes 1 column */}
               <div>
-                <RankingBoard classroom={classroom} currentStudent={studentAuth} />
+                <RankingBoard key={`ranking-${refreshKey}`} classroom={classroom} currentStudent={studentAuth} />
               </div>
             </div>
 
