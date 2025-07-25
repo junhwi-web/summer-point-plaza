@@ -28,6 +28,16 @@ const Index = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log("Auth state change:", event, session?.user?.email);
+        
+        if (event === 'SIGNED_OUT') {
+          console.log("User signed out, clearing state");
+          setSession(null);
+          setUser(null);
+          setClassroom(null);
+          setStudentProfile(null);
+          return;
+        }
+        
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -42,72 +52,38 @@ const Index = () => {
             
             if (studentData && !studentError) {
               // This is a student
+              console.log("Found student profile:", studentData);
               setStudentProfile(studentData);
               setClassroom(studentData.classrooms);
             } else {
               // This is a teacher
+              console.log("This is a teacher, looking for classroom");
               setStudentProfile(null);
-              
-              // Check for pending classroom creation
-              if (event === 'SIGNED_IN') {
-                const pendingClassroomName = localStorage.getItem('pendingClassroomName');
-                if (pendingClassroomName) {
-                  try {
-                    const classCode = Array(5).fill(0).map(() => String.fromCharCode(65 + Math.floor(Math.random() * 26))).join('');
-                    const { data: insertResult, error: classroomError } = await supabase
-                      .from('classrooms')
-                      .insert({
-                        code: classCode,
-                        name: pendingClassroomName,
-                        teacher_email: session.user.email
-                      })
-                      .select()
-                      .single();
-
-                    if (!classroomError) {
-                      setClassroom(insertResult);
-                      localStorage.removeItem('pendingClassroomName');
-                    }
-                  } catch (error) {
-                    console.error('Error creating classroom:', error);
-                  }
-                }
-              }
               
               // Try to fetch existing classroom for teacher
               try {
-                const { data: existingClassroom } = await supabase
+                const { data: existingClassroom, error: classroomError } = await supabase
                   .from('classrooms')
                   .select('*')
                   .eq('teacher_email', session.user.email)
                   .maybeSingle();
                   
-                if (existingClassroom) {
+                if (existingClassroom && !classroomError) {
+                  console.log("Found existing classroom:", existingClassroom);
                   setClassroom(existingClassroom);
+                } else {
+                  console.log("No classroom found for teacher");
+                  setClassroom(null);
                 }
               } catch (error) {
                 console.error("Error fetching classroom:", error);
+                setClassroom(null);
               }
             }
           } catch (error) {
             console.error("Error checking student profile:", error);
-            // If there's an error checking student profile, assume this is a teacher
             setStudentProfile(null);
-            
-            // Try to fetch existing classroom for teacher
-            try {
-              const { data: existingClassroom } = await supabase
-                .from('classrooms')
-                .select('*')
-                .eq('teacher_email', session.user.email)
-                .maybeSingle();
-                
-              if (existingClassroom) {
-                setClassroom(existingClassroom);
-              }
-            } catch (error) {
-              console.error("Error fetching classroom:", error);
-            }
+            setClassroom(null);
           }
         } else {
           setClassroom(null);
@@ -139,27 +115,25 @@ const Index = () => {
   const handleLogout = async () => {
     try {
       console.log("Starting logout...");
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.error("Logout error:", error);
-        throw error;
-      }
       
-      console.log("Logout successful, clearing state...");
+      // Clear state first
       setUser(null);
       setSession(null);
       setClassroom(null);
       setStudentProfile(null);
       
-      console.log("Navigating to auth page...");
+      // Then sign out
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error("Logout error:", error);
+      }
+      
+      console.log("Logout completed, navigating...");
       navigate('/auth', { replace: true });
     } catch (error: any) {
       console.error("Error during logout:", error);
-      toast({
-        title: "로그아웃 오류",
-        description: error.message || "로그아웃 중 오류가 발생했습니다.",
-        variant: "destructive",
-      });
+      // Force navigation even if there's an error
+      navigate('/auth', { replace: true });
     }
   };
 
