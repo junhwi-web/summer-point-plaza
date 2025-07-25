@@ -57,15 +57,45 @@ const HomeworkList = ({ student, studentProfile, studentAuth, onUpdate }: Homewo
     setLoading(true);
     
     try {
-      // For sessionStorage-based auth, fetch from localStorage
+      // For sessionStorage-based auth, fetch from database
       if (studentAuth) {
-        const homeworksKey = `homeworks_${studentAuth.name}`;
-        const existingHomeworks = JSON.parse(localStorage.getItem(homeworksKey) || '[]');
-        // Convert submittedAt strings back to Date objects
-        const formattedHomeworks = existingHomeworks.map((hw: any) => ({
-          ...hw,
-          submittedAt: new Date(hw.submittedAt)
+        // Find student in database first
+        const { data: studentData, error: studentError } = await supabase
+          .from('students')
+          .select('id')
+          .eq('name', studentAuth.name)
+          .eq('classroom_id', studentAuth.classroomId)
+          .single();
+
+        if (studentError || !studentData) {
+          console.error('Cannot find student for homework list:', studentError);
+          setLoading(false);
+          return;
+        }
+
+        // Fetch homework submissions from database
+        const { data, error } = await supabase
+          .from('homework_submissions')
+          .select('*')
+          .eq('student_id', studentData.id)
+          .order('submitted_at', { ascending: false });
+
+        if (error) {
+          console.error('Error fetching homeworks:', error);
+          setLoading(false);
+          return;
+        }
+
+        const formattedHomeworks: Homework[] = data.map(sub => ({
+          id: sub.id,
+          type: sub.homework_type as "diary" | "book-report" | "free-task",
+          title: sub.title || `${homeworkTypes[sub.homework_type as keyof typeof homeworkTypes]?.label || '과제'}`,
+          content: sub.content || '',
+          photo: sub.photo || '',
+          submittedAt: new Date(sub.submitted_at),
+          points: sub.points
         }));
+
         setHomeworks(formattedHomeworks);
         setLoading(false);
         return;
@@ -108,22 +138,32 @@ const HomeworkList = ({ student, studentProfile, studentAuth, onUpdate }: Homewo
 
   const handleDelete = async (homework: Homework) => {
     try {
-      // For sessionStorage-based auth, remove from localStorage
+      // For sessionStorage-based auth, delete from database
       if (studentAuth) {
-        const homeworksKey = `homeworks_${studentAuth.name}`;
-        const existingHomeworks = JSON.parse(localStorage.getItem(homeworksKey) || '[]');
-        const filteredHomeworks = existingHomeworks.filter((hw: Homework) => hw.id !== homework.id);
-        localStorage.setItem(homeworksKey, JSON.stringify(filteredHomeworks));
-        
-        setHomeworks(filteredHomeworks);
-        setDeletingHomework(null);
-        
+        const { error } = await supabase
+          .from('homework_submissions')
+          .delete()
+          .eq('id', homework.id);
+
+        if (error) {
+          console.error('Error deleting homework:', error);
+          toast({
+            title: "삭제 실패",
+            description: "과제 삭제 중 오류가 발생했습니다.",
+            variant: "destructive"
+          });
+          return;
+        }
+
         toast({
           title: "과제 삭제 완료!",
           description: `과제가 삭제되고 ${homework.points}포인트가 차감되었습니다.`,
           variant: "default"
         });
-        
+
+        // Refresh the homework list
+        fetchHomeworks();
+        setDeletingHomework(null);
         onUpdate?.();
         return;
       }

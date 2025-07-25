@@ -256,19 +256,7 @@ const HomeworkSubmission = ({ student, studentProfile, studentAuth, onSubmission
           points: data.points
         };
 
-        const today = new Date().toISOString().split('T')[0];
-        const submissionsKey = `submissions_${studentAuth.name}_${today}`;
-        const homeworksKey = `homeworks_${studentAuth.name}`;
-        
-        // Update today's submissions
-        const newTodaySubmissions = { ...todaySubmissions, [activeTab]: true };
-        localStorage.setItem(submissionsKey, JSON.stringify(newTodaySubmissions));
-        setTodaySubmissions(newTodaySubmissions);
-        
-        // Save homework to localStorage
-        const existingHomeworks = JSON.parse(localStorage.getItem(homeworksKey) || '[]');
-        localStorage.setItem(homeworksKey, JSON.stringify([newHomework, ...existingHomeworks]));
-        
+        // Update local state
         setHomeworks([newHomework, ...homeworks]);
         setTitle("");
         setContent("");
@@ -279,6 +267,9 @@ const HomeworkSubmission = ({ student, studentProfile, studentAuth, onSubmission
           description: `${homeworkTypes[activeTab].points}포인트를 획득했습니다!`,
           variant: "default"
         });
+
+        // Update today submissions state
+        setTodaySubmissions(prev => ({ ...prev, [activeTab]: true }));
 
         onSubmissionUpdate?.();
         return;
