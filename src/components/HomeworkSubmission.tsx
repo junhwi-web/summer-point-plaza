@@ -228,17 +228,18 @@ const HomeworkSubmission = ({ student, studentProfile, studentAuth, onSubmission
             points: homeworkTypes[activeTab].points,
             title: title.trim(),
             content: content.trim(),
-            photo: photo,
-            user_id: studentData.id
+            photo: photo
+            // user_id 필드 제거 - 409 에러 원인일 수 있음
           })
           .select()
           .single();
 
         if (error) {
           console.error('Error submitting homework:', error);
+          console.error('Error details:', JSON.stringify(error, null, 2));
           toast({
             title: "제출 실패",
-            description: "과제 제출 중 오류가 발생했습니다. 다시 시도해주세요.",
+            description: `과제 제출 중 오류가 발생했습니다: ${error.message}`,
             variant: "destructive"
           });
           return;
