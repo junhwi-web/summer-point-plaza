@@ -2,8 +2,9 @@ import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Users, BookOpen, Calendar, Award } from "lucide-react";
+import { Users, BookOpen, Calendar, Award, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface Student {
   id: string;
@@ -32,6 +33,7 @@ const HomeworkStatus = ({ classroom }: HomeworkStatusProps) => {
   const [submissions, setSubmissions] = useState<HomeworkSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [submissionsLoading, setSubmissionsLoading] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchStudents();
@@ -105,6 +107,34 @@ const HomeworkStatus = ({ classroom }: HomeworkStatusProps) => {
 
   const getTotalPoints = () => {
     return submissions.reduce((total, submission) => total + submission.points, 0);
+  };
+
+  const deleteSubmission = async (submissionId: string) => {
+    try {
+      const { error } = await supabase
+        .from('homework_submissions')
+        .delete()
+        .eq('id', submissionId);
+
+      if (error) throw error;
+
+      toast({
+        title: "과제 삭제 완료",
+        description: "과제가 성공적으로 삭제되었습니다.",
+      });
+
+      // 제출 목록 새로고침
+      if (selectedStudent) {
+        fetchSubmissions(selectedStudent.id);
+      }
+    } catch (error) {
+      console.error('Error deleting submission:', error);
+      toast({
+        title: "삭제 실패",
+        description: "과제 삭제 중 오류가 발생했습니다.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (loading) {
@@ -213,6 +243,14 @@ const HomeworkStatus = ({ classroom }: HomeworkStatusProps) => {
                             <span className="font-semibold text-yellow-600">
                               {submission.points}점
                             </span>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => deleteSubmission(submission.id)}
+                              className="ml-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         </div>
                         {(submission.content || submission.photo) && (
