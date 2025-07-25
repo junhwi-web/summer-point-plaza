@@ -32,6 +32,7 @@ const RankingBoard = ({ classroom, currentStudent }: RankingBoardProps) => {
 
     try {
       setLoading(true);
+      console.log('🏆 RankingBoard: Fetching rankings for classroom:', classroom.id);
 
       // Fetch all students in the classroom
       const { data: studentsData, error: studentsError } = await supabase
@@ -43,6 +44,8 @@ const RankingBoard = ({ classroom, currentStudent }: RankingBoardProps) => {
         console.error('Error fetching students:', studentsError);
         return;
       }
+
+      console.log('📚 RankingBoard: Found students:', studentsData);
 
       // Fetch submissions for all students
       const studentRankings: Student[] = [];
@@ -61,6 +64,8 @@ const RankingBoard = ({ classroom, currentStudent }: RankingBoardProps) => {
         const totalPoints = submissions.reduce((sum, sub) => sum + sub.points, 0);
         const completedTasks = submissions.length;
 
+        console.log(`📝 Student ${student.name}: ${totalPoints} points, ${completedTasks} tasks`);
+
         studentRankings.push({
           id: student.id,
           name: student.name,
@@ -76,6 +81,7 @@ const RankingBoard = ({ classroom, currentStudent }: RankingBoardProps) => {
         student.rank = index + 1;
       });
 
+      console.log('🏅 Final rankings:', studentRankings);
       setStudents(studentRankings);
     } catch (error) {
       console.error('Error fetching rankings:', error);
