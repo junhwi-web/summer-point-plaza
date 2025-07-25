@@ -23,31 +23,40 @@ const Auth = () => {
   const [studentName, setStudentName] = useState("");
   const [classCode, setClassCode] = useState("");
 
-  const handleTeacherAuth = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
+const handleTeacherAuth = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setIsLoading(true);
 
-    try {
-      if (isSignUp) {
-        // Sign up teacher
-        const { error } = await supabase.auth.signUp({
-          email: teacherEmail,
-          password: teacherPassword,
-          options: {
-            emailRedirectTo: `${window.location.origin}/`
-          }
+  try {
+    if (isSignUp) {
+      // 1) 교사 회원가입
+      const { data, error } = await supabase.auth.signUp({
+        email: teacherEmail,
+        password: teacherPassword,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`
+        }
+      });
+
+      if (error) throw error;
+
+      // 2) classroom insert
+      // 이메일 인증(verify) 후에 user가 활성화되는 정책이라도, DB에는 바로 insert해도 무방 (teacher_email로 식별)
+      const { error: classError } = await supabase
+        .from('classrooms')
+        .insert({
+          name: classroomName,
+          code: makeRandomClassCode(), // 5글자 랜덤코드 생성 함수(아래 참고)
+          teacher_email: teacherEmail
         });
 
-        if (error) throw error;
+      if (classError) throw classError;
 
-        // Store classroom name in localStorage for after login
-        localStorage.setItem('pendingClassroomName', classroomName);
-
-        toast({
-          title: "회원가입 성공",
-          description: "이메일을 확인하고 로그인해주세요.",
-        });
-      } else {
+      toast({
+        title: "회원가입 성공",
+        description: "이메일을 확인하고 로그인해주세요.",
+      });
+    } else {
         // Sign in teacher
         console.log("Attempting to sign in with:", teacherEmail);
         const { error } = await supabase.auth.signInWithPassword({
