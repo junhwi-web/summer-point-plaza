@@ -82,13 +82,44 @@ const HomeworkSubmission = ({ student, studentProfile, studentAuth, onSubmission
   };
 
   const checkTodaySubmissions = async () => {
-    // For sessionStorage-based auth, check localStorage
+    // For sessionStorage-based auth, check database for today's submissions
     if (studentAuth) {
+      // Find student in database first
+      const { data: studentData, error: studentError } = await supabase
+        .from('students')
+        .select('id')
+        .eq('name', studentAuth.name)
+        .eq('classroom_id', studentAuth.classroomId)
+        .single();
+
+      if (studentError || !studentData) {
+        console.error('Cannot find student for today submissions check:', studentError);
+        return;
+      }
+
       const today = new Date().toISOString().split('T')[0];
-      const key = `submissions_${studentAuth.name}_${today}`;
-      const todaySubmissionsData = localStorage.getItem(key);
-      if (todaySubmissionsData) {
-        setTodaySubmissions(JSON.parse(todaySubmissionsData));
+      
+      try {
+        const { data, error } = await supabase
+          .from('homework_submissions')
+          .select('homework_type')
+          .eq('student_id', studentData.id)
+          .gte('submitted_at', `${today}T00:00:00.000Z`)
+          .lt('submitted_at', `${today}T23:59:59.999Z`);
+
+        if (error) {
+          console.error('Error checking today submissions:', error);
+          return;
+        }
+
+        const todaySubmissionsMap: Record<string, boolean> = {};
+        data.forEach(sub => {
+          todaySubmissionsMap[sub.homework_type] = true;
+        });
+        
+        setTodaySubmissions(todaySubmissionsMap);
+      } catch (error) {
+        console.error('Error checking today submissions:', error);
       }
       return;
     }
