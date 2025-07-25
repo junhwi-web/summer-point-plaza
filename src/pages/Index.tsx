@@ -18,13 +18,26 @@ import { useToast } from "@/hooks/use-toast";
 const Index = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [studentProfile, setStudentProfile] = useState<any>(null);
+  const [studentAuth, setStudentAuth] = useState<any>(null);
   const [classroom, setClassroom] = useState<any>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check for authentication state
+    // Check for student sessionStorage auth first
+    const studentAuthData = sessionStorage.getItem('studentAuth');
+    if (studentAuthData) {
+      const parsedData = JSON.parse(studentAuthData);
+      setStudentAuth(parsedData);
+      setClassroom({
+        id: parsedData.classroomId,
+        name: parsedData.classroomName,
+        code: parsedData.classCode
+      });
+      return; // Don't check Supabase auth if student is logged in
+    }
+
+    // Check for authentication state (teachers only)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log("Auth state change:", event, session?.user?.email);
@@ -34,7 +47,7 @@ const Index = () => {
           setSession(null);
           setUser(null);
           setClassroom(null);
-          setStudentProfile(null);
+          setStudentAuth(null);
           return;
         }
         
@@ -42,85 +55,75 @@ const Index = () => {
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Check if this is a student profile
+          // This is a teacher (students use sessionStorage)
+          console.log("This is a teacher, looking for classroom");
+          setStudentAuth(null);
+          
+          // Try to fetch existing classroom for teacher
           try {
-            const { data: studentData, error: studentError } = await supabase
-              .from('student_profiles')
-              .select('*, classrooms(*)')
-              .eq('id', session.user.id)
+            const { data: existingClassroom, error: classroomError } = await supabase
+              .from('classrooms')
+              .select('*')
+              .eq('teacher_email', session.user.email)
               .maybeSingle();
-            
-            if (studentData && !studentError) {
-              // This is a student
-              console.log("Found student profile:", studentData);
-              setStudentProfile(studentData);
-              setClassroom(studentData.classrooms);
-            } else {
-              // This is a teacher
-              console.log("This is a teacher, looking for classroom");
-              setStudentProfile(null);
               
-              // Try to fetch existing classroom for teacher
-              try {
-                const { data: existingClassroom, error: classroomError } = await supabase
-                  .from('classrooms')
-                  .select('*')
-                  .eq('teacher_email', session.user.email)
-                  .maybeSingle();
-                  
-                if (existingClassroom && !classroomError) {
-                  console.log("Found existing classroom:", existingClassroom);
-                  setClassroom(existingClassroom);
-                } else {
-                  console.log("No classroom found for teacher");
-                  setClassroom(null);
-                }
-              } catch (error) {
-                console.error("Error fetching classroom:", error);
-                setClassroom(null);
-              }
+            if (existingClassroom && !classroomError) {
+              console.log("Found existing classroom:", existingClassroom);
+              setClassroom(existingClassroom);
+            } else {
+              console.log("No classroom found for teacher");
+              setClassroom(null);
             }
           } catch (error) {
-            console.error("Error checking student profile:", error);
-            setStudentProfile(null);
+            console.error("Error fetching classroom:", error);
             setClassroom(null);
           }
         } else {
           setClassroom(null);
-          setStudentProfile(null);
+          setStudentAuth(null);
         }
       }
     );
 
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-    });
+    // Check for existing session (teachers only)
+    if (!studentAuthData) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+      });
+    }
 
-    return () => subscription.unsubscribe();
+    return () => subscription?.unsubscribe();
   }, []);
 
-  // Redirect to auth if no user is logged in
+  // Redirect to auth if no user is logged in (and no student auth)
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (!user) {
+      if (!user && !studentAuth) {
         navigate('/auth');
       }
     }, 1000); // Wait 1 second
 
     return () => clearTimeout(timer);
-  }, [user, navigate]);
+  }, [user, studentAuth, navigate]);
 
   const handleLogout = async () => {
     try {
       console.log("Starting logout...");
       
-      // Clear state first
+      // Clear student auth if exists
+      if (studentAuth) {
+        sessionStorage.removeItem('studentAuth');
+        setStudentAuth(null);
+        setClassroom(null);
+        navigate('/auth', { replace: true });
+        return;
+      }
+      
+      // Clear teacher auth
       setUser(null);
       setSession(null);
       setClassroom(null);
-      setStudentProfile(null);
       
       // Then sign out
       const { error } = await supabase.auth.signOut();
@@ -138,8 +141,8 @@ const Index = () => {
   };
 
   const getUserDisplayName = () => {
-    if (studentProfile && classroom) {
-      return `${studentProfile.name} (${classroom.name})`;
+    if (studentAuth && classroom) {
+      return `${studentAuth.name} (${classroom.name})`;
     }
     if (user?.email) {
       return user.email;
@@ -176,7 +179,7 @@ const Index = () => {
   };
 
   // Show loading while checking auth state
-  if (!user) {
+  if (!user && !studentAuth) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -208,7 +211,7 @@ const Index = () => {
               <div className="text-left sm:text-right flex-1 sm:flex-initial">
                 <p className="text-xs text-primary-foreground/80 hidden sm:block">접속 중</p>
                 <p className="font-semibold text-xs sm:text-sm truncate">{getUserDisplayName()}</p>
-                {classroom && user && (
+                {classroom && (user || studentAuth) && (
                   <p className="text-xs text-primary-foreground/80">
                     {classroom.code}
                   </p>
@@ -230,7 +233,7 @@ const Index = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-2 sm:px-4 py-4 sm:py-6">
-        {studentProfile && classroom ? (
+        {studentAuth && classroom ? (
           // Student View  
           <>
             <VacationInfo classroomId={classroom?.id} />
@@ -240,7 +243,7 @@ const Index = () => {
               {/* Homework Submission - Takes 2 columns */}
               <div className="lg:col-span-2 space-y-4 sm:space-y-6">
                 <HomeworkSubmission 
-                  studentProfile={studentProfile} 
+                  studentAuth={studentAuth} 
                   onSubmissionUpdate={() => {
                     // Trigger re-fetch of data in other components
                     window.location.reload(); // Simple solution for now
@@ -249,7 +252,7 @@ const Index = () => {
                 
                 {/* Homework List */}
                 <HomeworkList 
-                  studentProfile={studentProfile}
+                  studentAuth={studentAuth}
                   onUpdate={() => {
                     // Trigger re-fetch of data in other components
                     window.location.reload(); // Simple solution for now
@@ -257,12 +260,12 @@ const Index = () => {
                 />
                 
                 {/* Stamp Calendar */}
-                <StampCalendar studentProfile={studentProfile} />
+                <StampCalendar studentAuth={studentAuth} />
               </div>
               
               {/* Ranking Board - Takes 1 column */}
               <div>
-                <RankingBoard classroom={classroom} currentStudent={studentProfile} />
+                <RankingBoard classroom={classroom} currentStudent={studentAuth} />
               </div>
             </div>
 

@@ -22,12 +22,13 @@ interface Homework {
 interface HomeworkSubmissionProps {
   student?: { id: string; name: string };
   studentProfile?: { id: string; name: string };
+  studentAuth?: { name: string; classroomId: string };
   onSubmissionUpdate?: () => void;
 }
 
-const HomeworkSubmission = ({ student, studentProfile, onSubmissionUpdate }: HomeworkSubmissionProps) => {
-  // Use studentProfile if available, fallback to student for backward compatibility
-  const currentStudent = studentProfile || student;
+const HomeworkSubmission = ({ student, studentProfile, studentAuth, onSubmissionUpdate }: HomeworkSubmissionProps) => {
+  // Use studentAuth if available, then studentProfile, fallback to student for backward compatibility
+  const currentStudent = studentAuth || studentProfile || student;
   const [homeworks, setHomeworks] = useState<Homework[]>([]);
   const [activeTab, setActiveTab] = useState<"diary" | "book-report" | "free-task">("diary");
   const [title, setTitle] = useState("");
@@ -38,13 +39,19 @@ const HomeworkSubmission = ({ student, studentProfile, onSubmissionUpdate }: Hom
   const { toast } = useToast();
 
   useEffect(() => {
-    if (currentStudent?.id) {
+    if (studentAuth?.name || currentStudent?.id) {
       fetchHomeworks();
       checkTodaySubmissions();
     }
-  }, [currentStudent?.id]);
+  }, [studentAuth?.name, currentStudent?.id]);
 
   const fetchHomeworks = async () => {
+    // For sessionStorage-based auth, we don't fetch from database
+    if (studentAuth) {
+      setHomeworks([]);
+      return;
+    }
+    
     if (!currentStudent?.id) return;
 
     try {
@@ -75,6 +82,17 @@ const HomeworkSubmission = ({ student, studentProfile, onSubmissionUpdate }: Hom
   };
 
   const checkTodaySubmissions = async () => {
+    // For sessionStorage-based auth, check localStorage
+    if (studentAuth) {
+      const today = new Date().toISOString().split('T')[0];
+      const key = `submissions_${studentAuth.name}_${today}`;
+      const todaySubmissionsData = localStorage.getItem(key);
+      if (todaySubmissionsData) {
+        setTodaySubmissions(JSON.parse(todaySubmissionsData));
+      }
+      return;
+    }
+    
     if (!currentStudent?.id) return;
 
     const today = new Date().toISOString().split('T')[0];
@@ -129,7 +147,7 @@ const HomeworkSubmission = ({ student, studentProfile, onSubmissionUpdate }: Hom
       return;
     }
 
-    if (!currentStudent?.id) {
+    if (!currentStudent?.id && !studentAuth?.name) {
       toast({
         title: "오류",
         description: "학생 정보를 찾을 수 없습니다.",
@@ -151,6 +169,50 @@ const HomeworkSubmission = ({ student, studentProfile, onSubmissionUpdate }: Hom
     setSubmitting(true);
 
     try {
+      // For sessionStorage-based auth, save to localStorage
+      if (studentAuth) {
+        const newHomework: Homework = {
+          id: `hw_${Date.now()}`,
+          type: activeTab,
+          title: title.trim(),
+          content: content.trim(),
+          photo: photo,
+          submittedAt: new Date(),
+          points: homeworkTypes[activeTab].points
+        };
+
+        // Update local state
+        setHomeworks([newHomework, ...homeworks]);
+        
+        // Save to localStorage
+        const today = new Date().toISOString().split('T')[0];
+        const submissionsKey = `submissions_${studentAuth.name}_${today}`;
+        const homeworksKey = `homeworks_${studentAuth.name}`;
+        
+        // Update today's submissions
+        const newTodaySubmissions = { ...todaySubmissions, [activeTab]: true };
+        localStorage.setItem(submissionsKey, JSON.stringify(newTodaySubmissions));
+        setTodaySubmissions(newTodaySubmissions);
+        
+        // Save homework
+        const existingHomeworks = JSON.parse(localStorage.getItem(homeworksKey) || '[]');
+        localStorage.setItem(homeworksKey, JSON.stringify([newHomework, ...existingHomeworks]));
+        
+        setTitle("");
+        setContent("");
+        setPhoto("");
+
+        toast({
+          title: "과제 제출 완료!",
+          description: `${homeworkTypes[activeTab].points}포인트를 획득했습니다!`,
+          variant: "default"
+        });
+
+        onSubmissionUpdate?.();
+        return;
+      }
+
+      // For database-based auth
       const { data, error } = await supabase
         .from('homework_submissions')
         .insert({
@@ -300,7 +362,7 @@ const HomeworkSubmission = ({ student, studentProfile, onSubmissionUpdate }: Hom
             <Button 
               onClick={submitHomework} 
               className="w-full text-sm" 
-              disabled={submitting || !currentStudent?.id || todaySubmissions[activeTab] || (homeworkTypes[activeTab].photoRequired && !photo.trim())}
+              disabled={submitting || (!currentStudent?.id && !studentAuth?.name) || todaySubmissions[activeTab] || (homeworkTypes[activeTab].photoRequired && !photo.trim())}
               size="sm"
             >
               {submitting 

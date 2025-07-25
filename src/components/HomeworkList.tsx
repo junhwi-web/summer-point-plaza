@@ -30,12 +30,13 @@ interface Homework {
 interface HomeworkListProps {
   student?: { id: string; name: string };
   studentProfile?: { id: string; name: string };
+  studentAuth?: { name: string; classroomId: string };
   onUpdate?: () => void;
 }
 
-const HomeworkList = ({ student, studentProfile, onUpdate }: HomeworkListProps) => {
-  // Use studentProfile if available, fallback to student for backward compatibility
-  const currentStudent = studentProfile || student;
+const HomeworkList = ({ student, studentProfile, studentAuth, onUpdate }: HomeworkListProps) => {
+  // Use studentAuth if available, then studentProfile, fallback to student for backward compatibility
+  const currentStudent = studentAuth || studentProfile || student;
   const [homeworks, setHomeworks] = useState<Homework[]>([]);
   const [editingHomework, setEditingHomework] = useState<Homework | null>(null);
   const [deletingHomework, setDeletingHomework] = useState<Homework | null>(null);
@@ -49,16 +50,28 @@ const HomeworkList = ({ student, studentProfile, onUpdate }: HomeworkListProps) 
   };
 
   useEffect(() => {
-    if (currentStudent?.id) {
-      fetchHomeworks();
-    }
-  }, [currentStudent?.id]);
+    fetchHomeworks();
+  }, [studentAuth?.name, currentStudent?.id]);
 
   const fetchHomeworks = async () => {
-    if (!currentStudent?.id) return;
-
     setLoading(true);
+    
     try {
+      // For sessionStorage-based auth, fetch from localStorage
+      if (studentAuth) {
+        const homeworksKey = `homeworks_${studentAuth.name}`;
+        const existingHomeworks = JSON.parse(localStorage.getItem(homeworksKey) || '[]');
+        setHomeworks(existingHomeworks);
+        setLoading(false);
+        return;
+      }
+
+      // For database-based auth
+      if (!currentStudent?.id) {
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('homework_submissions')
         .select('*')
@@ -90,6 +103,27 @@ const HomeworkList = ({ student, studentProfile, onUpdate }: HomeworkListProps) 
 
   const handleDelete = async (homework: Homework) => {
     try {
+      // For sessionStorage-based auth, remove from localStorage
+      if (studentAuth) {
+        const homeworksKey = `homeworks_${studentAuth.name}`;
+        const existingHomeworks = JSON.parse(localStorage.getItem(homeworksKey) || '[]');
+        const filteredHomeworks = existingHomeworks.filter((hw: Homework) => hw.id !== homework.id);
+        localStorage.setItem(homeworksKey, JSON.stringify(filteredHomeworks));
+        
+        setHomeworks(filteredHomeworks);
+        setDeletingHomework(null);
+        
+        toast({
+          title: "과제 삭제 완료!",
+          description: `과제가 삭제되고 ${homework.points}포인트가 차감되었습니다.`,
+          variant: "default"
+        });
+        
+        onUpdate?.();
+        return;
+      }
+
+      // For database-based auth
       const { error } = await supabase
         .from('homework_submissions')
         .delete()

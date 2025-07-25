@@ -8,15 +8,16 @@ import { supabase } from "@/integrations/supabase/client";
 interface StampCalendarProps {
   student?: { id: string; name: string };
   studentProfile?: { id: string; name: string };
+  studentAuth?: { name: string; classroomId: string };
   submissions?: Array<{
     date: Date;
     type: "diary" | "book-report" | "free-task";
   }>;
 }
 
-const StampCalendar = ({ student, studentProfile, submissions = [] }: StampCalendarProps) => {
-  // Use studentProfile if available, fallback to student for backward compatibility
-  const currentStudent = studentProfile || student;
+const StampCalendar = ({ student, studentProfile, studentAuth, submissions = [] }: StampCalendarProps) => {
+  // Use studentAuth if available, then studentProfile, fallback to student for backward compatibility
+  const currentStudent = studentAuth || studentProfile || student;
   const [currentDate, setCurrentDate] = useState(new Date());
   const [realSubmissions, setRealSubmissions] = useState<Array<{
     date: Date;
@@ -24,12 +25,25 @@ const StampCalendar = ({ student, studentProfile, submissions = [] }: StampCalen
   }>>([]);
 
   useEffect(() => {
-    if (currentStudent?.id) {
-      fetchSubmissions();
-    }
-  }, [currentStudent?.id]);
+    fetchSubmissions();
+  }, [studentAuth?.name, currentStudent?.id]);
 
   const fetchSubmissions = async () => {
+    // For sessionStorage-based auth, fetch from localStorage
+    if (studentAuth) {
+      const homeworksKey = `homeworks_${studentAuth.name}`;
+      const existingHomeworks = JSON.parse(localStorage.getItem(homeworksKey) || '[]');
+      
+      const formattedSubmissions = existingHomeworks.map((homework: any) => ({
+        date: new Date(homework.submittedAt),
+        type: homework.type as "diary" | "book-report" | "free-task"
+      }));
+      
+      setRealSubmissions(formattedSubmissions);
+      return;
+    }
+
+    // For database-based auth
     if (!currentStudent?.id) return;
 
     try {
@@ -55,7 +69,7 @@ const StampCalendar = ({ student, studentProfile, submissions = [] }: StampCalen
   };
 
   // Use real submissions if student is logged in, otherwise use props
-  const activeSubmissions = currentStudent?.id ? realSubmissions : submissions;
+  const activeSubmissions = (studentAuth || currentStudent?.id) ? realSubmissions : submissions;
 
   const getVacationData = () => {
     const startDate = new Date(2025, 6, 27); // 7/27
