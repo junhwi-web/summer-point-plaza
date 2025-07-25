@@ -85,6 +85,8 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
+      // Clear any existing Supabase session first
+      await supabase.auth.signOut();
       // Find classroom by code first
       const { data: classroom, error: classroomError } = await supabase
         .from("classrooms")

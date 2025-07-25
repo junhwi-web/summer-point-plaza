@@ -27,14 +27,21 @@ const Index = () => {
     // Check for student sessionStorage auth first
     const studentAuthData = sessionStorage.getItem('studentAuth');
     if (studentAuthData) {
-      const parsedData = JSON.parse(studentAuthData);
-      setStudentAuth(parsedData);
-      setClassroom({
-        id: parsedData.classroomId,
-        name: parsedData.classroomName,
-        code: parsedData.classCode
-      });
-      return; // Don't check Supabase auth if student is logged in
+      try {
+        const parsedData = JSON.parse(studentAuthData);
+        setStudentAuth(parsedData);
+        setClassroom({
+          id: parsedData.classroomId,
+          name: parsedData.classroomName,
+          code: parsedData.classCode
+        });
+        // Clear any existing Supabase session for students
+        supabase.auth.signOut();
+        return; // Don't check Supabase auth if student is logged in
+      } catch (error) {
+        // Invalid student auth data, remove it
+        sessionStorage.removeItem('studentAuth');
+      }
     }
 
     // Check for authentication state (teachers only)
@@ -88,8 +95,10 @@ const Index = () => {
     // Check for existing session (teachers only)
     if (!studentAuthData) {
       supabase.auth.getSession().then(({ data: { session } }) => {
-        setSession(session);
-        setUser(session?.user ?? null);
+        if (session) {
+          setSession(session);
+          setUser(session?.user ?? null);
+        }
       });
     }
 
