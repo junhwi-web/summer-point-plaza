@@ -78,7 +78,7 @@ const StudentPointsCard = ({ studentAuth }: StudentPointsCardProps) => {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {/* 총 포인트 */}
           <div className="text-center bg-primary/10 rounded-lg p-3 border border-primary/20">
             <div className="text-2xl font-bold text-primary mb-1">
@@ -98,17 +98,6 @@ const StudentPointsCard = ({ studentAuth }: StudentPointsCardProps) => {
             <div className="text-sm text-muted-foreground flex items-center justify-center gap-1">
               <Calendar className="h-3 w-3" />
               제출 과제
-            </div>
-          </div>
-
-          {/* 평균 포인트 */}
-          <div className="text-center bg-success/10 rounded-lg p-3 border border-success/20">
-            <div className="text-2xl font-bold text-success mb-1">
-              {submissionCount > 0 ? Math.round((totalPoints / submissionCount) * 10) / 10 : 0}
-            </div>
-            <div className="text-sm text-muted-foreground flex items-center justify-center gap-1">
-              <TrendingUp className="h-3 w-3" />
-              평균 점수
             </div>
           </div>
 
