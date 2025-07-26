@@ -119,7 +119,7 @@ const handleTeacherAuth = async (e: React.FormEvent) => {
         .select('*')
         .eq('name', studentName)
         .eq('classroom_id', classroom.id)
-        .single();
+        .maybeSingle();
 
       let studentId;
       if (!existingStudent) {
