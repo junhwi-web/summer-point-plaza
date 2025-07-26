@@ -42,13 +42,17 @@ const handleTeacherAuth = async (e: React.FormEvent) => {
 
       // 2) classroom insert
       // 이메일 인증(verify) 후에 user가 활성화되는 정책이라도, DB에는 바로 insert해도 무방 (teacher_email로 식별)
-      const { error: classError } = await supabase
-        .from('classrooms')
-        .insert({
-          name: classroomName,
-          code: makeRandomClassCode(), // 5글자 랜덤코드 생성 함수(아래 참고)
-          teacher_email: teacherEmail
-        });
+        const classCode = Array.from({ length: 5 }, () => 
+          String.fromCharCode(65 + Math.floor(Math.random() * 26))
+        ).join('');
+
+        const { error: classError } = await supabase
+          .from('classrooms')
+          .insert({
+            name: classroomName,
+            code: classCode,
+            teacher_email: teacherEmail
+          });
 
       if (classError) throw classError;
 
@@ -109,12 +113,39 @@ const handleTeacherAuth = async (e: React.FormEvent) => {
         throw new Error("유효하지 않은 반 코드입니다.");
       }
 
+      // Check if student already exists in the database
+      const { data: existingStudent } = await supabase
+        .from('students')
+        .select('*')
+        .eq('name', studentName)
+        .eq('classroom_id', classroom.id)
+        .single();
+
+      let studentId;
+      if (!existingStudent) {
+        // Create new student record
+        const { data: newStudent, error: studentError } = await supabase
+          .from('students')
+          .insert({
+            name: studentName,
+            classroom_id: classroom.id
+          })
+          .select()
+          .single();
+
+        if (studentError) throw studentError;
+        studentId = newStudent.id;
+      } else {
+        studentId = existingStudent.id;
+      }
+
       // Store student info in sessionStorage (simple auth)
       const studentData = {
         name: studentName,
         classroomId: classroom.id,
         classroomName: classroom.name,
-        classCode: classroom.code
+        classCode: classroom.code,
+        studentId: studentId
       };
       
       sessionStorage.setItem('studentAuth', JSON.stringify(studentData));
