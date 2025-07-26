@@ -29,14 +29,35 @@ const StampCalendar = ({ student, studentProfile, studentAuth, submissions = [] 
   }, [studentAuth?.name, currentStudent]);
 
   const fetchSubmissions = async () => {
-    // For sessionStorage-based auth, fetch from localStorage
+    // For sessionStorage-based auth, fetch from database
     if (studentAuth) {
-      const homeworksKey = `homeworks_${studentAuth.name}`;
-      const existingHomeworks = JSON.parse(localStorage.getItem(homeworksKey) || '[]');
-      
-      const formattedSubmissions = existingHomeworks.map((homework: any) => ({
-        date: new Date(homework.submittedAt),
-        type: homework.type as "diary" | "book-report" | "free-task"
+      // Find student in database first
+      const { data: studentData, error: studentError } = await supabase
+        .from('students')
+        .select('id')
+        .eq('name', studentAuth.name)
+        .eq('classroom_id', studentAuth.classroomId)
+        .maybeSingle();
+
+      if (studentError || !studentData) {
+        console.error('Cannot find student for calendar:', studentError);
+        return;
+      }
+
+      // Fetch homework submissions from database
+      const { data, error } = await supabase
+        .from('homework_submissions')
+        .select('homework_type, submitted_at')
+        .eq('student_id', studentData.id);
+
+      if (error) {
+        console.error('Error fetching submissions:', error);
+        return;
+      }
+
+      const formattedSubmissions = data.map(sub => ({
+        date: new Date(sub.submitted_at),
+        type: sub.homework_type as "diary" | "book-report" | "free-task"
       }));
       
       setRealSubmissions(formattedSubmissions);

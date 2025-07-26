@@ -6,6 +6,7 @@ import HomeworkList from "@/components/HomeworkList";
 import RankingBoard from "@/components/RankingBoard";
 import StampCalendar from "@/components/StampCalendar";
 import AdminDashboard from "@/components/AdminDashboard";
+import StudentPointsCard from "@/components/StudentPointsCard";
 import { BookOpen, Users, Target, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -246,6 +247,9 @@ const Index = () => {
           // Student View  
           <>
             <VacationInfo classroomId={classroom?.id} />
+            
+            {/* Student Stats Card */}
+            <StudentPointsCard studentAuth={studentAuth} key={`student-points-${refreshKey}`} />
             
               {/* Content Grid */}
             <div className="grid lg:grid-cols-3 gap-4 sm:gap-6">
