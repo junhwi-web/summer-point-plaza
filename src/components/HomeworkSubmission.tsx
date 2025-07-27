@@ -233,68 +233,11 @@ useEffect(() => {
           return;
         }
 
-        // Save homework to database
-const { data, error } = await supabase
-  .from('homework_submissions')
-  .insert({
-    student_id: studentData.id,
-    // UI 타입(activeTab)을 DB 타입으로 변환해서 저장!
-    homework_type: uiToDbType[activeTab],
-    points: homeworkTypes[activeTab].points,
-    title: title.trim(),
-    content: content.trim(),
-    photo: photo
-  })
-  .select()
-  .single();
-
-        if (error) {
-          console.error('Error submitting homework:', error);
-          console.error('Error details:', JSON.stringify(error, null, 2));
-          toast({
-            title: "제출 실패",
-            description: `과제 제출 중 오류가 발생했습니다: ${error.message}`,
-            variant: "destructive"
-          });
-          return;
-        }
-
-        // Also save to localStorage for backwards compatibility
-        const newHomework: Homework = {
-          id: data.id,
-          type: activeTab,
-          title: title.trim(),
-          content: content.trim(),
-          photo: photo,
-          submittedAt: new Date(data.submitted_at),
-          points: data.points
-        };
-
-        // Update local state
-        setHomeworks([newHomework, ...homeworks]);
-        setTitle("");
-        setContent("");
-        setPhoto("");
-
-        toast({
-          title: "과제 제출 완료!",
-          description: `${homeworkTypes[activeTab].points}포인트를 획득했습니다!`,
-          variant: "default"
-        });
-
-        // Update today submissions state
-        setTodaySubmissions(prev => ({ ...prev, [activeTab]: true }));
-
-        onSubmissionUpdate?.();
-        return;
-      }
-
       // For database-based auth
 const { data, error } = await supabase
   .from('homework_submissions')
   .insert({
-    student_id: studentData.id,
-    // UI 타입(activeTab)을 DB 타입으로 변환해서 저장!
+    student_id: (currentStudent as any).id, // 여기 studentData 아님!
     homework_type: uiToDbType[activeTab],
     points: homeworkTypes[activeTab].points,
     title: title.trim(),
