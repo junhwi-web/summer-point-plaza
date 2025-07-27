@@ -99,8 +99,9 @@ const handleTeacherAuth = async (e: React.FormEvent) => {
 
     try {
       // Find classroom by code first (public access, no auth needed)
-      const response = await fetch(`https://rcombszhlvafzpkfhooe.supabase.co/rest/v1/classrooms?select=*&code=eq.${classCode.toUpperCase()}`, {
-        headers: {
+const cleanCode = classCode.trim().toUpperCase();
+const response = await fetch(`https://rcombszhlvafzpkfhooe.supabase.co/rest/v1/classrooms?select=*&code=eq.${cleanCode}`, {
+  headers: {
           'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJjb21ic3pobHZhZnpwa2Zob29lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMzMDY5MjcsImV4cCI6MjA2ODg4MjkyN30.KOreS5iaoH9MlTI5rt-lfu01vjQXKXRisPEUteGmTjo',
           'Content-Type': 'application/json'
         }
