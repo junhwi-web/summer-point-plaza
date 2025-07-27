@@ -25,107 +25,107 @@ const Index = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  useEffect(() => {
-    // Check for student sessionStorage auth first
-    const studentAuthData = sessionStorage.getItem('studentAuth');
-    if (studentAuthData) {
-      try {
-        const parsedData = JSON.parse(studentAuthData);
-        setStudentAuth(parsedData);
-        setClassroom({
-          id: parsedData.classroomId,
-          name: parsedData.classroomName,
-          code: parsedData.classCode
-        });
-        return; // Don't check Supabase auth if student is logged in
-      } catch (error) {
-        // Invalid student auth data, remove it
-        sessionStorage.removeItem('studentAuth');
+useEffect(() => {
+  // 1️⃣ 학생 인증(localStorage X) > 기존 로직 유지
+  const studentAuthData = sessionStorage.getItem('studentAuth');
+  if (studentAuthData) {
+    try {
+      const parsedData = JSON.parse(studentAuthData);
+      setStudentAuth(parsedData);
+      setClassroom({
+        id: parsedData.classroomId,
+        name: parsedData.classroomName,
+        code: parsedData.classCode
+      });
+      return;
+    } catch (error) {
+      sessionStorage.removeItem('studentAuth');
+    }
+  }
+
+  // 2️⃣ 교사 localStorage 우선 적용(첫 로딩 시)
+  const teacherClassroom = localStorage.getItem('teacherClassroom');
+  if (teacherClassroom) {
+    try {
+      setClassroom(JSON.parse(teacherClassroom));
+    } catch {
+      localStorage.removeItem('teacherClassroom');
+    }
+  }
+
+  // 3️⃣ supabase auth 리스너
+  const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    async (event, session) => {
+      if (event === 'SIGNED_OUT') {
+        setSession(null);
+        setUser(null);
+        setClassroom(null);
+        setStudentAuth(null);
+        localStorage.removeItem('teacherClassroom');
+        return;
+      }
+
+      setSession(session);
+      setUser(session?.user ?? null);
+
+      if (session?.user) {
+        // 교사 classroom fetch(항상 최신 DB로 갱신)
+        try {
+          const { data: existingClassroom, error: classroomError } = await supabase
+            .from('classrooms')
+            .select('*')
+            .eq('teacher_email', (session.user.email ?? "").trim().toLowerCase())
+            .maybeSingle();
+
+          if (existingClassroom && !classroomError) {
+            setClassroom(existingClassroom);
+            localStorage.setItem('teacherClassroom', JSON.stringify(existingClassroom));
+          } else {
+            setClassroom(null);
+            localStorage.removeItem('teacherClassroom');
+          }
+        } catch {
+          setClassroom(null);
+          localStorage.removeItem('teacherClassroom');
+        }
+      } else {
+        setClassroom(null);
+        setStudentAuth(null);
+        localStorage.removeItem('teacherClassroom');
       }
     }
+  );
 
-    // Only set up Supabase auth listener if no student auth
-    // Check for authentication state (teachers only)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log("Auth state change:", event, session?.user?.email);
-        
-        if (event === 'SIGNED_OUT') {
-          console.log("User signed out, clearing state");
-          setSession(null);
-          setUser(null);
-          setClassroom(null);
-          setStudentAuth(null);
-          return;
-        }
-        
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          // This is a teacher (students use sessionStorage)
-          console.log("This is a teacher, looking for classroom");
-          setStudentAuth(null);
-          
-          // Try to fetch existing classroom for teacher
-          try {
-            console.log("Fetching classroom for teacher email:", session.user.email);
-console.log("[쿼리 전] teacher_email 조건:", (session.user.email ?? "").trim().toLowerCase());
-const { data: existingClassroom, error: classroomError } = await supabase
-  .from('classrooms')
-  .select('*')
-  .eq('teacher_email', (session.user.email ?? "").trim().toLowerCase())
-  .maybeSingle();
-console.log("[쿼리 결과]", existingClassroom, classroomError);
+  // 4️⃣ 기존 세션 복구
+  supabase.auth.getSession().then(async ({ data: { session } }) => {
+    if (session) {
+      setSession(session);
+      setUser(session?.user ?? null);
 
-if (existingClassroom && !classroomError) {
-  setClassroom(existingClassroom);
-} else {
-  setClassroom(null);
-}
-          } catch (error) {
-            console.error("Error fetching classroom:", error);
-            setClassroom(null);
-          }
+      try {
+        const { data: existingClassroom, error: classroomError } = await supabase
+          .from('classrooms')
+          .select('*')
+          .eq('teacher_email', (session.user.email ?? "").trim().toLowerCase())
+          .maybeSingle();
+
+        if (existingClassroom && !classroomError) {
+          setClassroom(existingClassroom);
+          localStorage.setItem('teacherClassroom', JSON.stringify(existingClassroom));
         } else {
           setClassroom(null);
-          setStudentAuth(null);
+          localStorage.removeItem('teacherClassroom');
         }
+      } catch {
+        setClassroom(null);
+        localStorage.removeItem('teacherClassroom');
       }
-    );
-
-    // Check for existing session (teachers only)
-    if (!studentAuthData) {
-      supabase.auth.getSession().then(async ({ data: { session } }) => {
-        if (session) {
-          console.log("Found existing session for:", session.user.email);
-          setSession(session);
-          setUser(session?.user ?? null);
-          
-          // Fetch classroom for existing session
-          try {
-            console.log("Fetching classroom for existing session:", session.user.email);
-const { data: existingClassroom, error: classroomError } = await supabase
-  .from('classrooms')
-  .select('*')
-  .eq('teacher_email', (session.user.email ?? "").trim().toLowerCase())
-  .maybeSingle();
-
-if (existingClassroom && !classroomError) {
-  setClassroom(existingClassroom);
-} else {
-  setClassroom(null);
-}
-          } catch (error) {
-            console.error("Error fetching classroom for existing session:", error);
-            setClassroom(null);
-          }
-        }
-      });
-
-      return () => subscription?.unsubscribe();
     }
-  }, []);
+  });
+
+  // 5️⃣ 언마운트 시 구독 해제
+  return () => subscription?.unsubscribe();
+}, []);
 
   // Redirect to auth if no user is logged in (and no student auth)
   useEffect(() => {
@@ -155,6 +155,7 @@ if (existingClassroom && !classroomError) {
       setUser(null);
       setSession(null);
       setClassroom(null);
+        localStorage.removeItem('teacherClassroom');
       
       // Then sign out
       const { error } = await supabase.auth.signOut();
@@ -195,11 +196,12 @@ if (existingClassroom && !classroomError) {
         
       if (error) throw error;
       
-      setClassroom({ ...classroom, code: newCode });
-      toast({
-        title: "학급 코드 변경됨",
-        description: `새 학급 코드: ${newCode}`,
-      });
+setClassroom({ ...classroom, code: newCode });
+localStorage.setItem('teacherClassroom', JSON.stringify({ ...classroom, code: newCode })); // 추가!
+toast({
+  title: "학급 코드 변경됨",
+  description: `새 학급 코드: ${newCode}`,
+});
     } catch (error: any) {
       toast({
         title: "오류 발생",
@@ -379,12 +381,13 @@ if (customCode.trim()) {
                         return;
                       }
 
-                      console.log("Classroom created successfully:", newClassroom);
-                      setClassroom(newClassroom);
-                      toast({
-                        title: "학급 생성 완료",
-                        description: `학급 코드: ${finalCode}`,
-                      });
+console.log("Classroom created successfully:", newClassroom);
+setClassroom(newClassroom);
+localStorage.setItem('teacherClassroom', JSON.stringify(newClassroom));  // 이 줄 추가!
+toast({
+  title: "학급 생성 완료",
+  description: `학급 코드: ${finalCode}`,
+});
                     } catch (error: any) {
                       console.error('Error creating classroom:', error);
                       toast({
