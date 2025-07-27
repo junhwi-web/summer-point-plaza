@@ -7,7 +7,7 @@ import RankingBoard from "@/components/RankingBoard";
 import StampCalendar from "@/components/StampCalendar";
 import AdminDashboard from "@/components/AdminDashboard";
 
-import { BookOpen, LogOut } from "lucide-react";
+import { BookOpen, Users, Target, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -24,10 +24,9 @@ const Index = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [isAuthLoading, setIsAuthLoading] = useState(true);
 
-  // 🚩 useEffect에서 무한로딩 원인 제거 + 정리
   useEffect(() => {
+    // Check for student sessionStorage auth first
     const studentAuthData = sessionStorage.getItem('studentAuth');
     if (studentAuthData) {
       try {
@@ -38,93 +37,114 @@ const Index = () => {
           name: parsedData.classroomName,
           code: parsedData.classCode
         });
-        setIsAuthLoading(false);
+        return; // Don't check Supabase auth if student is logged in
       } catch (error) {
+        // Invalid student auth data, remove it
         sessionStorage.removeItem('studentAuth');
-        setIsAuthLoading(false); // 예외시에도 반드시 로딩 종료
       }
-      return; // 🚩 cleanup 반환 없음(여기서 끝!)
     }
 
-    // 교사 계정 분기
+    // Only set up Supabase auth listener if no student auth
+    // Check for authentication state (teachers only)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log("Auth state change:", event, session?.user?.email);
+        
         if (event === 'SIGNED_OUT') {
+          console.log("User signed out, clearing state");
           setSession(null);
           setUser(null);
           setClassroom(null);
           setStudentAuth(null);
-          setIsAuthLoading(false);
           return;
         }
-
+        
         setSession(session);
         setUser(session?.user ?? null);
-
+        
         if (session?.user) {
+          // This is a teacher (students use sessionStorage)
+          console.log("This is a teacher, looking for classroom");
           setStudentAuth(null);
+          
+          // Try to fetch existing classroom for teacher
           try {
-            const { data: existingClassroom } = await supabase
-              .from('classrooms')
-              .select('*')
-              .eq('teacher_email', (session.user.email ?? "").trim())
-              .maybeSingle();
-            if (existingClassroom && !Array.isArray(existingClassroom)) {
-              setClassroom(existingClassroom);
-            } else {
-              setClassroom(null);
-            }
-          } catch {
+            console.log("Fetching classroom for teacher email:", session.user.email);
+const { data: existingClassroom, error: classroomError } = await supabase
+  .from('classrooms')
+  .select('*')
+  .eq('teacher_email', (session.user.email ?? "").trim())
+  .maybeSingle();
+
+console.log("Query result:", { existingClassroom, classroomError });
+
+if (existingClassroom && !Array.isArray(existingClassroom) && !classroomError) {
+  setClassroom(existingClassroom);
+} else {
+  setClassroom(null);
+}
+          } catch (error) {
+            console.error("Error fetching classroom:", error);
             setClassroom(null);
           }
         } else {
           setClassroom(null);
           setStudentAuth(null);
         }
-        setIsAuthLoading(false);
       }
     );
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session) {
-        setSession(session);
-        setUser(session?.user ?? null);
+    // Check for existing session (teachers only)
+    if (!studentAuthData) {
+      supabase.auth.getSession().then(async ({ data: { session } }) => {
+        if (session) {
+          console.log("Found existing session for:", session.user.email);
+          setSession(session);
+          setUser(session?.user ?? null);
+          
+          // Fetch classroom for existing session
+          try {
+            console.log("Fetching classroom for existing session:", session.user.email);
+const { data: existingClassroom, error: classroomError } = await supabase
+  .from('classrooms')
+  .select('*')
+  .eq('teacher_email', (session.user.email ?? "").trim())
+  .maybeSingle();
 
-        try {
-          const { data: existingClassroom } = await supabase
-            .from('classrooms')
-            .select('*')
-            .eq('teacher_email', (session.user.email ?? "").trim())
-            .maybeSingle();
-          if (existingClassroom && !Array.isArray(existingClassroom)) {
-            setClassroom(existingClassroom);
-          } else {
+console.log("Query result:", { existingClassroom, classroomError });
+
+if (existingClassroom && !Array.isArray(existingClassroom) && !classroomError) {
+  setClassroom(existingClassroom);
+} else {
+  setClassroom(null);
+}
+          } catch (error) {
+            console.error("Error fetching classroom for existing session:", error);
             setClassroom(null);
           }
-        } catch {
-          setClassroom(null);
         }
-      }
-      setIsAuthLoading(false);
-    });
+      });
 
-    // 🚩 cleanup은 이 분기에서만 리턴
-    return () => subscription?.unsubscribe();
+      return () => subscription?.unsubscribe();
+    }
   }, []);
 
-  // 로그인 안 했으면 1초 후 /auth로 리디렉션
+  // Redirect to auth if no user is logged in (and no student auth)
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (!user && !studentAuth && !isAuthLoading) {
+      if (!user && !studentAuth) {
         navigate('/auth');
       }
-    }, 1000);
+    }, 1000); // Wait 1 second
+
     return () => clearTimeout(timer);
-  }, [user, studentAuth, navigate, isAuthLoading]);
+  }, [user, studentAuth, navigate]);
 
   const handleLogout = async () => {
     try {
-      // 학생이면
+      console.log("Starting logout...");
+      
+      // Clear student auth if exists
       if (studentAuth) {
         sessionStorage.removeItem('studentAuth');
         setStudentAuth(null);
@@ -132,13 +152,23 @@ const Index = () => {
         navigate('/auth', { replace: true });
         return;
       }
-      // 교사면
+      
+      // Clear teacher auth
       setUser(null);
       setSession(null);
       setClassroom(null);
-      await supabase.auth.signOut();
+      
+      // Then sign out
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error("Logout error:", error);
+      }
+      
+      console.log("Logout completed, navigating...");
       navigate('/auth', { replace: true });
     } catch (error: any) {
+      console.error("Error during logout:", error);
+      // Force navigation even if there's an error
       navigate('/auth', { replace: true });
     }
   };
@@ -155,14 +185,18 @@ const Index = () => {
 
   const handleGenerateNewCode = async () => {
     if (!user || !classroom) return;
+    
     try {
       const response = await supabase.rpc('generate_class_code');
       const newCode = response.data;
+      
       const { error } = await supabase
         .from('classrooms')
         .update({ code: newCode })
         .eq('id', classroom.id);
+        
       if (error) throw error;
+      
       setClassroom({ ...classroom, code: newCode });
       toast({
         title: "학급 코드 변경됨",
@@ -177,21 +211,8 @@ const Index = () => {
     }
   };
 
-  // 🚩 로딩이 끝나기 전엔 무조건 스피너
-  if (isAuthLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">로딩 중...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // 🚩 여기서부터는 로딩 끝나고 분기
+  // Show loading while checking auth state
   if (!user && !studentAuth) {
-    // 이 분기엔 사실상 거의 안 옴(위에서 /auth 리디렉션됨), 예비용
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -246,36 +267,50 @@ const Index = () => {
       {/* Main Content */}
       <main className="container mx-auto px-2 sm:px-4 py-4 sm:py-6">
         {studentAuth && classroom ? (
-          // 학생뷰
+          // Student View  
           <>
             <VacationInfo classroomId={classroom?.id} />
+            
+              {/* Content Grid */}
             <div className="grid lg:grid-cols-3 gap-4 sm:gap-6">
+              {/* Homework Submission - Takes 2 columns */}
               <div className="lg:col-span-2 space-y-4 sm:space-y-6">
                 <HomeworkSubmission 
                   key={`homework-submission-${refreshKey}`}
                   studentAuth={studentAuth} 
-                  onSubmissionUpdate={() => setRefreshKey(prev => prev + 1)} 
+                  onSubmissionUpdate={() => {
+                    setRefreshKey(prev => prev + 1);
+                  }} 
                 />
+                
+                {/* Homework List */}
                 <HomeworkList 
                   key={`homework-list-${refreshKey}`}
                   studentAuth={studentAuth}
-                  onUpdate={() => setRefreshKey(prev => prev + 1)}
+                  onUpdate={() => {
+                    setRefreshKey(prev => prev + 1);
+                  }}
                 />
+                
+                {/* Stamp Calendar */}
                 <StampCalendar key={`stamp-calendar-${refreshKey}`} studentAuth={studentAuth} />
               </div>
+              
+              {/* Ranking Board - Takes 1 column */}
               <div>
                 <RankingBoard key={`ranking-${refreshKey}`} classroom={classroom} currentStudent={studentAuth} />
               </div>
             </div>
+
           </>
         ) : user && classroom ? (
-          // 관리자(교사)뷰
+          // Admin View - only show if both user and classroom exist
           <>
             <VacationInfo classroomId={classroom.id} />
             <AdminDashboard classroom={classroom} onGenerateNewCode={handleGenerateNewCode} />
           </>
         ) : user && !classroom ? (
-          // 교사 - 학급 없음
+          // Admin View but no classroom yet - show create classroom form
           <>
             <VacationInfo />
             <div className="max-w-md mx-auto">
@@ -292,28 +327,37 @@ const Index = () => {
                     const formData = new FormData(e.currentTarget);
                     const name = formData.get('classroomName') as string;
                     const customCode = formData.get('classroomCode') as string;
-
+                    
                     if (!name.trim()) return;
-
+                    
                     try {
+                      console.log("Creating classroom with name:", name, "and code:", customCode);
+                      
                       // Use custom code or generate random one
                       const finalCode = customCode.trim().toUpperCase() || Array(5).fill(0).map(() => String.fromCharCode(65 + Math.floor(Math.random() * 26))).join('');
+                      
                       // Check if custom code already exists
-                      if (customCode.trim()) {
-                        const { data: existingClassroom } = await supabase
-                          .from('classrooms')
-                          .select('id')
-                          .eq('code', finalCode)
-                          .maybeSingle();
-                        if (existingClassroom) {
-                          toast({
-                            title: "오류 발생",
-                            description: "이미 사용 중인 학급 코드입니다. 다른 코드를 입력해주세요.",
-                            variant: "destructive",
-                          });
-                          return;
-                        }
-                      }
+if (customCode.trim()) {
+  const finalCode = customCode.trim().toUpperCase();
+
+  const { data: existingClassroom } = await supabase
+    .from('classrooms')
+    .select('id')
+    .eq('code', finalCode)
+    .maybeSingle();
+
+  if (existingClassroom) {
+    toast({
+      title: "오류 발생",
+      description: "이미 사용 중인 학급 코드입니다. 다른 코드를 입력해주세요.",
+      variant: "destructive",
+    });
+    return;
+  }
+}
+                      
+                      console.log("Final class code:", finalCode);
+
                       // Create classroom
                       const { data: newClassroom, error } = await supabase
                         .from('classrooms')
@@ -326,6 +370,7 @@ const Index = () => {
                         .single();
 
                       if (error) {
+                        console.error("Error creating classroom:", error);
                         toast({
                           title: "오류 발생",
                           description: error.message,
@@ -334,12 +379,14 @@ const Index = () => {
                         return;
                       }
 
+                      console.log("Classroom created successfully:", newClassroom);
                       setClassroom(newClassroom);
                       toast({
                         title: "학급 생성 완료",
                         description: `학급 코드: ${finalCode}`,
                       });
                     } catch (error: any) {
+                      console.error('Error creating classroom:', error);
                       toast({
                         title: "오류 발생",
                         description: error.message,
