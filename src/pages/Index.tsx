@@ -22,116 +22,96 @@ const Index = () => {
   const [studentAuth, setStudentAuth] = useState<any>(null);
   const [classroom, setClassroom] = useState<any>(null);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [isAuthLoading, setIsAuthLoading] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchAuth = async () => {
-      // 학생 인증 먼저 확인
-      const studentAuthData = sessionStorage.getItem('studentAuth');
-      if (studentAuthData) {
-        try {
-          const parsedData = JSON.parse(studentAuthData);
-          setStudentAuth(parsedData);
-          setClassroom({
-            id: parsedData.classroomId,
-            name: parsedData.classroomName,
-            code: parsedData.classCode
-          });
-          setIsAuthLoading(false); // 🚩 로딩 끝!
-          return;
-        } catch {
-          sessionStorage.removeItem('studentAuth');
-        }
+useEffect(() => {
+  const studentAuthData = sessionStorage.getItem('studentAuth');
+  if (studentAuthData) {
+    try {
+      const parsedData = JSON.parse(studentAuthData);
+      setStudentAuth(parsedData);
+      setClassroom({
+        id: parsedData.classroomId,
+        name: parsedData.classroomName,
+        code: parsedData.classCode
+      });
+      setIsAuthLoading(false); // <-- 바로 로딩 끝
+      return;
+    } catch (error) {
+      sessionStorage.removeItem('studentAuth');
+    }
+  }
+
+  // teachers only
+  const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    async (event, session) => {
+      if (event === 'SIGNED_OUT') {
+        setSession(null);
+        setUser(null);
+        setClassroom(null);
+        setStudentAuth(null);
+        setIsAuthLoading(false); // <-- 바로 로딩 끝
+        return;
       }
 
-      // 교사 인증 처리
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(
-        async (event, session) => {
-          if (event === 'SIGNED_OUT') {
-            setSession(null);
-            setUser(null);
-            setClassroom(null);
-            setStudentAuth(null);
-            setIsAuthLoading(false);
-            return;
-          }
+      setSession(session);
+      setUser(session?.user ?? null);
 
-          setSession(session);
-          setUser(session?.user ?? null);
-
-          if (session?.user) {
-            setStudentAuth(null);
-            try {
-              const { data: existingClassroom } = await supabase
-                .from('classrooms')
-                .select('*')
-                .eq('teacher_email', (session.user.email ?? "").trim())
-                .maybeSingle();
-              if (existingClassroom && !Array.isArray(existingClassroom)) {
-                setClassroom(existingClassroom);
-              } else {
-                setClassroom(null);
-              }
-            } catch {
-              setClassroom(null);
-            }
+      if (session?.user) {
+        setStudentAuth(null);
+        try {
+          const { data: existingClassroom } = await supabase
+            .from('classrooms')
+            .select('*')
+            .eq('teacher_email', (session.user.email ?? "").trim())
+            .maybeSingle();
+          if (existingClassroom && !Array.isArray(existingClassroom)) {
+            setClassroom(existingClassroom);
           } else {
             setClassroom(null);
-            setStudentAuth(null);
           }
-          setIsAuthLoading(false);
+        } catch {
+          setClassroom(null);
         }
-      );
+      } else {
+        setClassroom(null);
+        setStudentAuth(null);
+      }
+      setIsAuthLoading(false); // <-- 세션 확인 후 로딩 끝
+    }
+  );
 
-      // 새로고침 시, 기존 세션 있으면 classroom fetch
-      supabase.auth.getSession().then(async ({ data: { session } }) => {
-        if (session) {
-          setSession(session);
-          setUser(session?.user ?? null);
+  if (!studentAuthData) {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session) {
+        setSession(session);
+        setUser(session?.user ?? null);
 
-          try {
-            const { data: existingClassroom } = await supabase
-              .from('classrooms')
-              .select('*')
-              .eq('teacher_email', (session.user.email ?? "").trim())
-              .maybeSingle();
-            if (existingClassroom && !Array.isArray(existingClassroom)) {
-              setClassroom(existingClassroom);
-            } else {
-              setClassroom(null);
-            }
-          } catch {
+        try {
+          const { data: existingClassroom } = await supabase
+            .from('classrooms')
+            .select('*')
+            .eq('teacher_email', (session.user.email ?? "").trim())
+            .maybeSingle();
+          if (existingClassroom && !Array.isArray(existingClassroom)) {
+            setClassroom(existingClassroom);
+          } else {
             setClassroom(null);
           }
+        } catch {
+          setClassroom(null);
         }
-        setIsAuthLoading(false); // 🚩 항상 끝에 false!
-      });
+      }
+      setIsAuthLoading(false); // <-- getSession 끝나고 로딩 false
+    });
 
-      return () => subscription?.unsubscribe();
-    };
-
-    fetchAuth();
-  }, []);
-
-  // 🚩 반드시 최상단에! 로딩 끝나기 전에는 아무것도 렌더하지 않음
-  if (isAuthLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">로딩 중...</p>
-        </div>
-      </div>
-    );
+    return () => subscription?.unsubscribe();
+  } else {
+    setIsAuthLoading(false); // <-- 학생은 바로 로딩 끝
   }
-
-  // 1. 로그인 안 되어있으면 (1초 후 강제 이동, useEffect가 따로 처리)
-  if (!user && !studentAuth) {
-    return null;
-  }
-
+}, []);
 
   // Redirect to auth if no user is logged in (and no student auth)
   useEffect(() => {
