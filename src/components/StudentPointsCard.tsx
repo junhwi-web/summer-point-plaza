@@ -1,7 +1,8 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, TrendingUp, Calendar, Star } from "lucide-react";
+import { Trophy, Star, BookOpen, PenTool, Lightbulb } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface StudentPointsCardProps {
@@ -10,7 +11,9 @@ interface StudentPointsCardProps {
 
 const StudentPointsCard = ({ studentAuth }: StudentPointsCardProps) => {
   const [totalPoints, setTotalPoints] = useState(0);
-  const [submissionCount, setSubmissionCount] = useState(0);
+  const [diaryCount, setDiaryCount] = useState(0);
+  const [bookReportCount, setBookReportCount] = useState(0);
+  const [freeAssignmentCount, setFreeAssignmentCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -35,10 +38,10 @@ const StudentPointsCard = ({ studentAuth }: StudentPointsCardProps) => {
         return;
       }
 
-      // Fetch homework submissions to calculate points
+      // Fetch homework submissions to calculate points and counts by type
       const { data, error } = await supabase
         .from('homework_submissions')
-        .select('points')
+        .select('points, homework_type')
         .eq('student_id', studentData.id);
 
       if (error) {
@@ -47,9 +50,18 @@ const StudentPointsCard = ({ studentAuth }: StudentPointsCardProps) => {
         return;
       }
 
+      // Calculate total points
       const total = data.reduce((sum, sub) => sum + sub.points, 0);
       setTotalPoints(total);
-      setSubmissionCount(data.length);
+
+      // Count submissions by type
+      const diary = data.filter(sub => sub.homework_type === 'diary').length;
+      const bookReport = data.filter(sub => sub.homework_type === 'book_report').length;
+      const freeAssignment = data.filter(sub => sub.homework_type === 'free_assignment').length;
+
+      setDiaryCount(diary);
+      setBookReportCount(bookReport);
+      setFreeAssignmentCount(freeAssignment);
     } catch (error) {
       console.error('Error fetching student stats:', error);
     } finally {
@@ -78,7 +90,7 @@ const StudentPointsCard = ({ studentAuth }: StudentPointsCardProps) => {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {/* 총 포인트 */}
           <div className="text-center bg-primary/10 rounded-lg p-3 border border-primary/20">
             <div className="text-2xl font-bold text-primary mb-1">
@@ -90,25 +102,36 @@ const StudentPointsCard = ({ studentAuth }: StudentPointsCardProps) => {
             </div>
           </div>
 
-          {/* 제출한 과제 수 */}
-          <div className="text-center bg-accent/10 rounded-lg p-3 border border-accent/20">
-            <div className="text-2xl font-bold text-accent-foreground mb-1">
-              {submissionCount}
+          {/* 일기 개수 */}
+          <div className="text-center bg-blue-100 dark:bg-blue-900/20 rounded-lg p-3 border border-blue-200 dark:border-blue-800">
+            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-1">
+              {diaryCount}/3
             </div>
             <div className="text-sm text-muted-foreground flex items-center justify-center gap-1">
-              <Calendar className="h-3 w-3" />
-              제출 과제
+              <PenTool className="h-3 w-3" />
+              일기
             </div>
           </div>
 
-          {/* 랭킹 위치 */}
-          <div className="text-center bg-orange-100 dark:bg-orange-900/20 rounded-lg p-3 border border-orange-200 dark:border-orange-800">
-            <div className="text-2xl font-bold text-orange-600 dark:text-orange-400 mb-1">
-              ?
+          {/* 독후감 개수 */}
+          <div className="text-center bg-green-100 dark:bg-green-900/20 rounded-lg p-3 border border-green-200 dark:border-green-800">
+            <div className="text-2xl font-bold text-green-600 dark:text-green-400 mb-1">
+              {bookReportCount}/3
             </div>
             <div className="text-sm text-muted-foreground flex items-center justify-center gap-1">
-              <Trophy className="h-3 w-3" />
-              랭킹 순위
+              <BookOpen className="h-3 w-3" />
+              독후감
+            </div>
+          </div>
+
+          {/* 자유과제 개수 */}
+          <div className="text-center bg-purple-100 dark:bg-purple-900/20 rounded-lg p-3 border border-purple-200 dark:border-purple-800">
+            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400 mb-1">
+              {freeAssignmentCount}
+            </div>
+            <div className="text-sm text-muted-foreground flex items-center justify-center gap-1">
+              <Lightbulb className="h-3 w-3" />
+              자유과제
             </div>
           </div>
         </div>
