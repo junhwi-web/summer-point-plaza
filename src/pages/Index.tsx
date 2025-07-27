@@ -7,7 +7,7 @@ import RankingBoard from "@/components/RankingBoard";
 import StampCalendar from "@/components/StampCalendar";
 import AdminDashboard from "@/components/AdminDashboard";
 
-import { BookOpen, Users, Target, LogOut } from "lucide-react";
+import { BookOpen, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -26,64 +26,65 @@ const Index = () => {
   const { toast } = useToast();
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
-useEffect(() => {
-  const studentAuthData = sessionStorage.getItem('studentAuth');
-  if (studentAuthData) {
-    try {
-      const parsedData = JSON.parse(studentAuthData);
-      setStudentAuth(parsedData);
-      setClassroom({
-        id: parsedData.classroomId,
-        name: parsedData.classroomName,
-        code: parsedData.classCode
-      });
-      setIsAuthLoading(false); // <-- 바로 로딩 끝
-      return;
-    } catch (error) {
-      sessionStorage.removeItem('studentAuth');
-    }
-  }
-
-  // teachers only
-  const { data: { subscription } } = supabase.auth.onAuthStateChange(
-    async (event, session) => {
-      if (event === 'SIGNED_OUT') {
-        setSession(null);
-        setUser(null);
-        setClassroom(null);
-        setStudentAuth(null);
-        setIsAuthLoading(false); // <-- 바로 로딩 끝
-        return;
+  // 🚩 useEffect에서 무한로딩 원인 제거 + 정리
+  useEffect(() => {
+    const studentAuthData = sessionStorage.getItem('studentAuth');
+    if (studentAuthData) {
+      try {
+        const parsedData = JSON.parse(studentAuthData);
+        setStudentAuth(parsedData);
+        setClassroom({
+          id: parsedData.classroomId,
+          name: parsedData.classroomName,
+          code: parsedData.classCode
+        });
+        setIsAuthLoading(false);
+      } catch (error) {
+        sessionStorage.removeItem('studentAuth');
+        setIsAuthLoading(false); // 예외시에도 반드시 로딩 종료
       }
+      return; // 🚩 cleanup 반환 없음(여기서 끝!)
+    }
 
-      setSession(session);
-      setUser(session?.user ?? null);
+    // 교사 계정 분기
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_OUT') {
+          setSession(null);
+          setUser(null);
+          setClassroom(null);
+          setStudentAuth(null);
+          setIsAuthLoading(false);
+          return;
+        }
 
-      if (session?.user) {
-        setStudentAuth(null);
-        try {
-          const { data: existingClassroom } = await supabase
-            .from('classrooms')
-            .select('*')
-            .eq('teacher_email', (session.user.email ?? "").trim())
-            .maybeSingle();
-          if (existingClassroom && !Array.isArray(existingClassroom)) {
-            setClassroom(existingClassroom);
-          } else {
+        setSession(session);
+        setUser(session?.user ?? null);
+
+        if (session?.user) {
+          setStudentAuth(null);
+          try {
+            const { data: existingClassroom } = await supabase
+              .from('classrooms')
+              .select('*')
+              .eq('teacher_email', (session.user.email ?? "").trim())
+              .maybeSingle();
+            if (existingClassroom && !Array.isArray(existingClassroom)) {
+              setClassroom(existingClassroom);
+            } else {
+              setClassroom(null);
+            }
+          } catch {
             setClassroom(null);
           }
-        } catch {
+        } else {
           setClassroom(null);
+          setStudentAuth(null);
         }
-      } else {
-        setClassroom(null);
-        setStudentAuth(null);
+        setIsAuthLoading(false);
       }
-      setIsAuthLoading(false); // <-- 세션 확인 후 로딩 끝
-    }
-  );
+    );
 
-  if (!studentAuthData) {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session) {
         setSession(session);
@@ -104,31 +105,26 @@ useEffect(() => {
           setClassroom(null);
         }
       }
-      setIsAuthLoading(false); // <-- getSession 끝나고 로딩 false
+      setIsAuthLoading(false);
     });
 
+    // 🚩 cleanup은 이 분기에서만 리턴
     return () => subscription?.unsubscribe();
-  } else {
-    setIsAuthLoading(false); // <-- 학생은 바로 로딩 끝
-  }
-}, []);
+  }, []);
 
-  // Redirect to auth if no user is logged in (and no student auth)
+  // 로그인 안 했으면 1초 후 /auth로 리디렉션
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (!user && !studentAuth) {
+      if (!user && !studentAuth && !isAuthLoading) {
         navigate('/auth');
       }
-    }, 1000); // Wait 1 second
-
+    }, 1000);
     return () => clearTimeout(timer);
-  }, [user, studentAuth, navigate]);
+  }, [user, studentAuth, navigate, isAuthLoading]);
 
   const handleLogout = async () => {
     try {
-      console.log("Starting logout...");
-      
-      // Clear student auth if exists
+      // 학생이면
       if (studentAuth) {
         sessionStorage.removeItem('studentAuth');
         setStudentAuth(null);
@@ -136,23 +132,13 @@ useEffect(() => {
         navigate('/auth', { replace: true });
         return;
       }
-      
-      // Clear teacher auth
+      // 교사면
       setUser(null);
       setSession(null);
       setClassroom(null);
-      
-      // Then sign out
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.error("Logout error:", error);
-      }
-      
-      console.log("Logout completed, navigating...");
+      await supabase.auth.signOut();
       navigate('/auth', { replace: true });
     } catch (error: any) {
-      console.error("Error during logout:", error);
-      // Force navigation even if there's an error
       navigate('/auth', { replace: true });
     }
   };
@@ -169,18 +155,14 @@ useEffect(() => {
 
   const handleGenerateNewCode = async () => {
     if (!user || !classroom) return;
-    
     try {
       const response = await supabase.rpc('generate_class_code');
       const newCode = response.data;
-      
       const { error } = await supabase
         .from('classrooms')
         .update({ code: newCode })
         .eq('id', classroom.id);
-        
       if (error) throw error;
-      
       setClassroom({ ...classroom, code: newCode });
       toast({
         title: "학급 코드 변경됨",
@@ -195,19 +177,21 @@ useEffect(() => {
     }
   };
 
+  // 🚩 로딩이 끝나기 전엔 무조건 스피너
   if (isAuthLoading) {
-  return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto"></div>
-        <p className="mt-4 text-muted-foreground">로딩 중...</p>
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">로딩 중...</p>
+        </div>
       </div>
-    </div>
-  );
-}
-  
-  // Show loading while checking auth state
+    );
+  }
+
+  // 🚩 여기서부터는 로딩 끝나고 분기
   if (!user && !studentAuth) {
+    // 이 분기엔 사실상 거의 안 옴(위에서 /auth 리디렉션됨), 예비용
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -262,50 +246,36 @@ useEffect(() => {
       {/* Main Content */}
       <main className="container mx-auto px-2 sm:px-4 py-4 sm:py-6">
         {studentAuth && classroom ? (
-          // Student View  
+          // 학생뷰
           <>
             <VacationInfo classroomId={classroom?.id} />
-            
-              {/* Content Grid */}
             <div className="grid lg:grid-cols-3 gap-4 sm:gap-6">
-              {/* Homework Submission - Takes 2 columns */}
               <div className="lg:col-span-2 space-y-4 sm:space-y-6">
                 <HomeworkSubmission 
                   key={`homework-submission-${refreshKey}`}
                   studentAuth={studentAuth} 
-                  onSubmissionUpdate={() => {
-                    setRefreshKey(prev => prev + 1);
-                  }} 
+                  onSubmissionUpdate={() => setRefreshKey(prev => prev + 1)} 
                 />
-                
-                {/* Homework List */}
                 <HomeworkList 
                   key={`homework-list-${refreshKey}`}
                   studentAuth={studentAuth}
-                  onUpdate={() => {
-                    setRefreshKey(prev => prev + 1);
-                  }}
+                  onUpdate={() => setRefreshKey(prev => prev + 1)}
                 />
-                
-                {/* Stamp Calendar */}
                 <StampCalendar key={`stamp-calendar-${refreshKey}`} studentAuth={studentAuth} />
               </div>
-              
-              {/* Ranking Board - Takes 1 column */}
               <div>
                 <RankingBoard key={`ranking-${refreshKey}`} classroom={classroom} currentStudent={studentAuth} />
               </div>
             </div>
-
           </>
         ) : user && classroom ? (
-          // Admin View - only show if both user and classroom exist
+          // 관리자(교사)뷰
           <>
             <VacationInfo classroomId={classroom.id} />
             <AdminDashboard classroom={classroom} onGenerateNewCode={handleGenerateNewCode} />
           </>
         ) : user && !classroom ? (
-          // Admin View but no classroom yet - show create classroom form
+          // 교사 - 학급 없음
           <>
             <VacationInfo />
             <div className="max-w-md mx-auto">
@@ -322,39 +292,28 @@ useEffect(() => {
                     const formData = new FormData(e.currentTarget);
                     const name = formData.get('classroomName') as string;
                     const customCode = formData.get('classroomCode') as string;
-                    
+
                     if (!name.trim()) return;
-                    
+
                     try {
-                      console.log("Creating classroom with name:", name, "and code:", customCode);
-                      
                       // Use custom code or generate random one
                       const finalCode = customCode.trim().toUpperCase() || Array(5).fill(0).map(() => String.fromCharCode(65 + Math.floor(Math.random() * 26))).join('');
-                      
                       // Check if custom code already exists
-if (customCode.trim()) {
-  const finalCode = customCode.trim().toUpperCase();
-
-  const { data: existingClassroom } = await supabase
-    .from('classrooms')
-    .select('id')
-    .eq('code', finalCode)
-    .maybeSingle();
-
-  if (existingClassroom) {
-    toast({
-      title: "오류 발생",
-      description: "이미 사용 중인 학급 코드입니다. 다른 코드를 입력해주세요.",
-      variant: "destructive",
-    });
-    return;
-  }
-}
-                      
-                      console.log("Final class code:", finalCode);
-
-
-
+                      if (customCode.trim()) {
+                        const { data: existingClassroom } = await supabase
+                          .from('classrooms')
+                          .select('id')
+                          .eq('code', finalCode)
+                          .maybeSingle();
+                        if (existingClassroom) {
+                          toast({
+                            title: "오류 발생",
+                            description: "이미 사용 중인 학급 코드입니다. 다른 코드를 입력해주세요.",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+                      }
                       // Create classroom
                       const { data: newClassroom, error } = await supabase
                         .from('classrooms')
@@ -367,7 +326,6 @@ if (customCode.trim()) {
                         .single();
 
                       if (error) {
-                        console.error("Error creating classroom:", error);
                         toast({
                           title: "오류 발생",
                           description: error.message,
@@ -376,14 +334,12 @@ if (customCode.trim()) {
                         return;
                       }
 
-                      console.log("Classroom created successfully:", newClassroom);
                       setClassroom(newClassroom);
                       toast({
                         title: "학급 생성 완료",
                         description: `학급 코드: ${finalCode}`,
                       });
                     } catch (error: any) {
-                      console.error('Error creating classroom:', error);
                       toast({
                         title: "오류 발생",
                         description: error.message,
