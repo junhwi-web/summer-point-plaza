@@ -72,10 +72,11 @@ const Index = () => {
             console.log("Fetching classroom for teacher email:", session.user.email);
 const { data: existingClassroom, error: classroomError } = await supabase
   .from('classrooms')
-  .select('*')
-  .eq('teacher_email', (session.user.email ?? "").trim().toLowerCase())
+  .select('id')
+  .eq('code', finalCode)
   .maybeSingle();
-             console.log("[기존 세션 쿼리 결과]", existingClassroom, classroomError);
+
+console.log("[기존 세션 쿼리 결과]", existingClassroom, classroomError);
 
 if (existingClassroom && !classroomError) {
   setClassroom(existingClassroom);
@@ -337,12 +338,13 @@ if (existingClassroom && !classroomError) {
 if (customCode.trim()) {
   const finalCode = customCode.trim().toUpperCase();
 
-  const { data: existingClassroom } = await supabase
+  const { data: existingClassroom, error: classroomError } = await supabase
     .from('classrooms')
     .select('id')
     .eq('code', finalCode)
     .maybeSingle();
-   console.log("[기존 세션 쿼리 결과]", existingClassroom, classroomError);
+
+  console.log("[기존 세션 쿼리 결과]", existingClassroom, classroomError);
 
   if (existingClassroom) {
     toast({
