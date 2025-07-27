@@ -98,10 +98,34 @@ const Index = () => {
 
     // Check for existing session (teachers only)
     if (!studentAuthData) {
-      supabase.auth.getSession().then(({ data: { session } }) => {
+      supabase.auth.getSession().then(async ({ data: { session } }) => {
         if (session) {
+          console.log("Found existing session for:", session.user.email);
           setSession(session);
           setUser(session?.user ?? null);
+          
+          // Fetch classroom for existing session
+          try {
+            console.log("Fetching classroom for existing session:", session.user.email);
+            const { data: existingClassroom, error: classroomError } = await supabase
+              .from('classrooms')
+              .select('*')
+              .eq('teacher_email', session.user.email)
+              .maybeSingle();
+              
+            console.log("Existing session classroom result:", { existingClassroom, classroomError });
+              
+            if (existingClassroom && !classroomError) {
+              console.log("Setting classroom from existing session:", existingClassroom);
+              setClassroom(existingClassroom);
+            } else {
+              console.log("No classroom found for existing session");
+              setClassroom(null);
+            }
+          } catch (error) {
+            console.error("Error fetching classroom for existing session:", error);
+            setClassroom(null);
+          }
         }
       });
 
