@@ -103,7 +103,7 @@ const StudentPointsCard = ({ studentAuth }: StudentPointsCardProps) => {
           </div>
 
           {/* 일기 개수 */}
-          <div className="text-center bg-blue-100 dark:bg-blue-900/20 rounded-lg p-3 border border-blue-200 dark:border-blue-800">
+          <div className="text-center bg-background rounded-lg p-3 border">
             <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-1">
               {diaryCount}/3
             </div>
@@ -114,7 +114,7 @@ const StudentPointsCard = ({ studentAuth }: StudentPointsCardProps) => {
           </div>
 
           {/* 독후감 개수 */}
-          <div className="text-center bg-green-100 dark:bg-green-900/20 rounded-lg p-3 border border-green-200 dark:border-green-800">
+          <div className="text-center bg-background rounded-lg p-3 border">
             <div className="text-2xl font-bold text-green-600 dark:text-green-400 mb-1">
               {bookReportCount}/3
             </div>
@@ -125,7 +125,7 @@ const StudentPointsCard = ({ studentAuth }: StudentPointsCardProps) => {
           </div>
 
           {/* 자유과제 개수 */}
-          <div className="text-center bg-purple-100 dark:bg-purple-900/20 rounded-lg p-3 border border-purple-200 dark:border-purple-800">
+          <div className="text-center bg-background rounded-lg p-3 border">
             <div className="text-2xl font-bold text-purple-600 dark:text-purple-400 mb-1">
               {freeAssignmentCount}
             </div>

@@ -309,32 +309,6 @@ const Index = () => {
               </div>
             </div>
 
-            {/* Stats Cards */}
-            <div className="grid md:grid-cols-3 gap-6 mt-8">
-              <div className="bg-card p-6 rounded-lg border text-center">
-                <Target className="h-8 w-8 mx-auto mb-2 text-primary" />
-                <h3 className="font-semibold text-lg">과제 목표</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  일기 3편, 독후감 3편 이상 작성
-                </p>
-              </div>
-              
-              <div className="bg-card p-6 rounded-lg border text-center">
-                <Users className="h-8 w-8 mx-auto mb-2 text-accent" />
-                <h3 className="font-semibold text-lg">참여 학생</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  전체 학급이 함께 참여하는 활동
-                </p>
-              </div>
-              
-              <div className="bg-card p-6 rounded-lg border text-center">
-                <BookOpen className="h-8 w-8 mx-auto mb-2 text-success" />
-                <h3 className="font-semibold text-lg">자유 과제</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  나만의 특별한 과제로 추가 포인트 획득
-                </p>
-              </div>
-            </div>
           </>
         ) : user && classroom ? (
           // Admin View - only show if both user and classroom exist
