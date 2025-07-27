@@ -22,10 +22,8 @@ const Index = () => {
   const [studentAuth, setStudentAuth] = useState<any>(null);
   const [classroom, setClassroom] = useState<any>(null);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [classroomLoading, setClassroomLoading] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
-
 
   useEffect(() => {
     // Check for student sessionStorage auth first
@@ -64,68 +62,69 @@ const Index = () => {
         setSession(session);
         setUser(session?.user ?? null);
         
-if (session?.user) {
-  setClassroomLoading(true); // ⭐️ 쿼리 시작할 때
+        if (session?.user) {
+          // This is a teacher (students use sessionStorage)
+          console.log("This is a teacher, looking for classroom");
+          setStudentAuth(null);
+          
+          // Try to fetch existing classroom for teacher
+          try {
+            console.log("Fetching classroom for teacher email:", session.user.email);
+console.log("[쿼리 전] teacher_email 조건:", (session.user.email ?? "").trim().toLowerCase());
+const { data: existingClassroom, error: classroomError } = await supabase
+  .from('classrooms')
+  .select('*')
+  .eq('teacher_email', (session.user.email ?? "").trim().toLowerCase())
+  .maybeSingle();
+console.log("[쿼리 결과]", existingClassroom, classroomError);
 
-  try {
-    // classroom 쿼리
-    const { data: existingClassroom, error: classroomError } = await supabase
-      .from('classrooms')
-      .select('*')
-      .eq('teacher_email', (session.user.email ?? "").trim().toLowerCase())
-      .maybeSingle();
-
-    if (existingClassroom && !classroomError) {
-      setClassroom(existingClassroom);
-    } else {
-      setClassroom(null);
-    }
-  } catch (error) {
-    setClassroom(null);
-  } finally {
-    setClassroomLoading(false); // ⭐️ 쿼리 끝났을 때 (성공/실패 상관없이)
-  }
+if (existingClassroom && !classroomError) {
+  setClassroom(existingClassroom);
 } else {
   setClassroom(null);
-  setStudentAuth(null);
-  setClassroomLoading(false); // ⭐️ 유저 없으면 바로 종료
 }
+          } catch (error) {
+            console.error("Error fetching classroom:", error);
+            setClassroom(null);
+          }
+        } else {
+          setClassroom(null);
+          setStudentAuth(null);
+        }
       }
     );
 
     // Check for existing session (teachers only)
-if (!studentAuthData) {
-  supabase.auth.getSession().then(async ({ data: { session } }) => {
-    if (session) {
-      setClassroomLoading(true); // ⭐️ 쿼리 시작
+    if (!studentAuthData) {
+      supabase.auth.getSession().then(async ({ data: { session } }) => {
+        if (session) {
           console.log("Found existing session for:", session.user.email);
           setSession(session);
           setUser(session?.user ?? null);
-      try {
-        // classroom 쿼리
-        const { data: existingClassroom, error: classroomError } = await supabase
-          .from('classrooms')
-          .select('*')
-          .eq('teacher_email', (session.user.email ?? "").trim().toLowerCase())
-          .maybeSingle();
+          
+          // Fetch classroom for existing session
+          try {
+            console.log("Fetching classroom for existing session:", session.user.email);
+const { data: existingClassroom, error: classroomError } = await supabase
+  .from('classrooms')
+  .select('*')
+  .eq('teacher_email', (session.user.email ?? "").trim().toLowerCase())
+  .maybeSingle();
 
-        if (existingClassroom && !classroomError) {
-          setClassroom(existingClassroom);
-        } else {
-          setClassroom(null);
-        }
-      } catch (error) {
-        setClassroom(null);
-      } finally {
-        setClassroomLoading(false); // ⭐️ 쿼리 끝
-      }
-    } else {
-      setClassroomLoading(false); // ⭐️ 세션이 아예 없을 때
-    }
-  });
-
-  return () => subscription?.unsubscribe();
+if (existingClassroom && !classroomError) {
+  setClassroom(existingClassroom);
+} else {
+  setClassroom(null);
 }
+          } catch (error) {
+            console.error("Error fetching classroom for existing session:", error);
+            setClassroom(null);
+          }
+        }
+      });
+
+      return () => subscription?.unsubscribe();
+    }
   }, []);
 
   // Redirect to auth if no user is logged in (and no student auth)
@@ -211,16 +210,16 @@ if (!studentAuthData) {
   };
 
   // Show loading while checking auth state
-if (classroomLoading || (!user && !studentAuth)) {
-  return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto"></div>
-        <p className="mt-4 text-muted-foreground">로딩 중...</p>
+  if (!user && !studentAuth) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">로딩 중...</p>
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
