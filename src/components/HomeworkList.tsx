@@ -242,9 +242,13 @@ const formattedHomeworks: Homework[] = data.map(sub => ({
             </div>
           ) : (
             <div className="space-y-4">
-              {homeworks.map((homework) => {
-                const type = homeworkTypes[homework.type];
-                const Icon = type.icon;
+{homeworks.map((homework) => {
+  const type = homeworkTypes[homework.type];
+  if (!type) {
+    console.warn("잘못된 type입니다:", homework.type, homework);
+    return null;
+  }
+  const Icon = type.icon;
                 
                 return (
                   <div key={homework.id} className="border rounded-lg p-4 space-y-3">
