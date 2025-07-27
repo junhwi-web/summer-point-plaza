@@ -98,7 +98,9 @@ if (!studentAuthData) {
   supabase.auth.getSession().then(async ({ data: { session } }) => {
     if (session) {
       setClassroomLoading(true); // ⭐️ 쿼리 시작
-      // ...중략...
+          console.log("Found existing session for:", session.user.email);
+          setSession(session);
+          setUser(session?.user ?? null);
       try {
         // classroom 쿼리
         const { data: existingClassroom, error: classroomError } = await supabase
