@@ -55,10 +55,15 @@ const StampCalendar = ({ student, studentProfile, studentAuth, submissions = [] 
         return;
       }
 
-      const formattedSubmissions = data.map(sub => ({
-        date: new Date(sub.submitted_at),
-        type: sub.homework_type as "diary" | "book-report" | "free-task"
-      }));
+ const dbToUiType = {
+   diary: "diary",
+   book_report: "book-report",
+   free_task: "free-task"
+ };
+ const formattedSubmissions = data.map(sub => ({
+   date: new Date(sub.submitted_at),
+   type: dbToUiType[sub.homework_type] as "diary" | "book-report" | "free-task"
+ }));
       
       setRealSubmissions(formattedSubmissions);
       return;
@@ -78,10 +83,15 @@ const StampCalendar = ({ student, studentProfile, studentAuth, submissions = [] 
         return;
       }
 
-      const formattedSubmissions = data.map(sub => ({
-        date: new Date(sub.submitted_at),
-        type: sub.homework_type as "diary" | "book-report" | "free-task"
-      }));
+ const dbToUiType = {
+   diary: "diary",
+   book_report: "book-report",
+   free_task: "free-task"
+ };
+ const formattedSubmissions = data.map(sub => ({
+   date: new Date(sub.submitted_at),
+   type: dbToUiType[sub.homework_type] as "diary" | "book-report" | "free-task"
+ }));
 
       setRealSubmissions(formattedSubmissions);
     } catch (error) {
