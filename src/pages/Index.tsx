@@ -69,17 +69,20 @@ const Index = () => {
           
           // Try to fetch existing classroom for teacher
           try {
+            console.log("Fetching classroom for teacher email:", session.user.email);
             const { data: existingClassroom, error: classroomError } = await supabase
               .from('classrooms')
               .select('*')
               .eq('teacher_email', session.user.email)
               .maybeSingle();
               
+            console.log("Query result:", { existingClassroom, classroomError });
+              
             if (existingClassroom && !classroomError) {
               console.log("Found existing classroom:", existingClassroom);
               setClassroom(existingClassroom);
             } else {
-              console.log("No classroom found for teacher");
+              console.log("No classroom found for teacher, error:", classroomError);
               setClassroom(null);
             }
           } catch (error) {
