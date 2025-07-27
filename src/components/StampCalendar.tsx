@@ -258,33 +258,7 @@ const StampCalendar = ({ student, studentProfile, studentAuth, submissions = [] 
             );
           })}
         </div>
-        
-        {/* 방학 과제 통계 */}
-        <div className="mt-6 pt-4 border-t">
-          <div className="text-lg text-center font-bold text-primary mb-4">
-            🎯 방학 과제 현황
-          </div>
-          <div className="flex justify-center gap-6">
-            <div className="text-center bg-primary/10 rounded-xl p-3">
-              <div className="text-2xl font-bold text-primary">
-                {activeSubmissions.filter(s => s.type === "diary").length}
-              </div>
-              <div className="text-sm font-medium text-muted-foreground">일기 ✏️</div>
-            </div>
-            <div className="text-center bg-accent/10 rounded-xl p-3">
-              <div className="text-2xl font-bold text-accent-foreground">
-                {activeSubmissions.filter(s => s.type === "book-report").length}
-              </div>
-              <div className="text-sm font-medium text-muted-foreground">독후감 📚</div>
-            </div>
-            <div className="text-center bg-success/10 rounded-xl p-3">
-              <div className="text-2xl font-bold text-success">
-                {activeSubmissions.filter(s => s.type === "free-task").length}
-              </div>
-              <div className="text-sm font-medium text-muted-foreground">자유과제 ⭐</div>
-            </div>
-          </div>
-        </div>
+      
       </CardContent>
     </Card>
   );
