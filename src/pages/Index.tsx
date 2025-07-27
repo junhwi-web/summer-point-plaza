@@ -27,80 +27,46 @@ const Index = () => {
   const { toast } = useToast();
 
 
-  useEffect(() => {
-    // Check for student sessionStorage auth first
-    const studentAuthData = sessionStorage.getItem('studentAuth');
-    if (studentAuthData) {
-      try {
-        const parsedData = JSON.parse(studentAuthData);
-        setStudentAuth(parsedData);
-        setClassroom({
-          id: parsedData.classroomId,
-          name: parsedData.classroomName,
-          code: parsedData.classCode
-        });
-        return; // Don't check Supabase auth if student is logged in
-      } catch (error) {
-        // Invalid student auth data, remove it
-        sessionStorage.removeItem('studentAuth');
-      }
+useEffect(() => {
+  // Check for student sessionStorage auth first
+  const studentAuthData = sessionStorage.getItem('studentAuth');
+  if (studentAuthData) {
+    try {
+      const parsedData = JSON.parse(studentAuthData);
+      setStudentAuth(parsedData);
+      setClassroom({
+        id: parsedData.classroomId,
+        name: parsedData.classroomName,
+        code: parsedData.classCode
+      });
+      setClassroomLoading(false); // 👈 반드시 필요!
+      return;
+    } catch (error) {
+      sessionStorage.removeItem('studentAuth');
+      setClassroomLoading(false); // 👈 반드시 필요!
+      return;
     }
-
-    // Only set up Supabase auth listener if no student auth
-    // Check for authentication state (teachers only)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log("Auth state change:", event, session?.user?.email);
-        
-        if (event === 'SIGNED_OUT') {
-          console.log("User signed out, clearing state");
-          setSession(null);
-          setUser(null);
-          setClassroom(null);
-          setStudentAuth(null);
-          return;
-        }
-        
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-if (session?.user) {
-  setClassroomLoading(true); // ⭐️ 쿼리 시작할 때
-
-  try {
-    // classroom 쿼리
-    const { data: existingClassroom, error: classroomError } = await supabase
-      .from('classrooms')
-      .select('*')
-      .eq('teacher_email', (session.user.email ?? "").trim().toLowerCase())
-      .maybeSingle();
-
-    if (existingClassroom && !classroomError) {
-      setClassroom(existingClassroom);
-    } else {
-      setClassroom(null);
-    }
-  } catch (error) {
-    setClassroom(null);
-  } finally {
-    setClassroomLoading(false); // ⭐️ 쿼리 끝났을 때 (성공/실패 상관없이)
   }
-} else {
-  setClassroom(null);
-  setStudentAuth(null);
-  setClassroomLoading(false); // ⭐️ 유저 없으면 바로 종료
-}
-      }
-    );
 
-    // Check for existing session (teachers only)
-if (!studentAuthData) {
-  supabase.auth.getSession().then(async ({ data: { session } }) => {
-    if (session) {
-      setClassroomLoading(true); // ⭐️ 쿼리 시작
-      // ...중략...
+  // async 분리!
+  const handleAuthChange = async (event, session) => {
+    console.log("Auth state change:", event, session?.user?.email);
+
+    if (event === 'SIGNED_OUT') {
+      setSession(null);
+      setUser(null);
+      setClassroom(null);
+      setStudentAuth(null);
+      setClassroomLoading(false); // 👈
+      return;
+    }
+
+    setSession(session);
+    setUser(session?.user ?? null);
+
+    if (session?.user) {
+      setClassroomLoading(true);
       try {
-        // classroom 쿼리
         const { data: existingClassroom, error: classroomError } = await supabase
           .from('classrooms')
           .select('*')
@@ -115,16 +81,48 @@ if (!studentAuthData) {
       } catch (error) {
         setClassroom(null);
       } finally {
-        setClassroomLoading(false); // ⭐️ 쿼리 끝
+        setClassroomLoading(false); // ⭐️
       }
     } else {
-      setClassroomLoading(false); // ⭐️ 세션이 아예 없을 때
+      setClassroom(null);
+      setStudentAuth(null);
+      setClassroomLoading(false);
+    }
+  };
+
+  // onAuthStateChange에 직접 async 콜백 넣지 말고!
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    handleAuthChange(event, session);
+  });
+
+  // Check for existing session (teachers only)
+  supabase.auth.getSession().then(async ({ data: { session } }) => {
+    if (session) {
+      setClassroomLoading(true);
+      try {
+        const { data: existingClassroom, error: classroomError } = await supabase
+          .from('classrooms')
+          .select('*')
+          .eq('teacher_email', (session.user.email ?? "").trim().toLowerCase())
+          .maybeSingle();
+
+        if (existingClassroom && !classroomError) {
+          setClassroom(existingClassroom);
+        } else {
+          setClassroom(null);
+        }
+      } catch (error) {
+        setClassroom(null);
+      } finally {
+        setClassroomLoading(false);
+      }
+    } else {
+      setClassroomLoading(false); // ⭐️
     }
   });
 
   return () => subscription?.unsubscribe();
-}
-  }, []);
+}, []);
 
   // Redirect to auth if no user is logged in (and no student auth)
   useEffect(() => {
