@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Users, BookOpen, Calendar, Award } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface Student {
   id: string;
@@ -32,6 +33,7 @@ const HomeworkStatus = ({ classroom }: HomeworkStatusProps) => {
   const [submissions, setSubmissions] = useState<HomeworkSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [submissionsLoading, setSubmissionsLoading] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchStudents();
@@ -184,62 +186,83 @@ const HomeworkStatus = ({ classroom }: HomeworkStatusProps) => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {submissionsLoading ? (
-                  <div className="text-center py-8">과제를 불러오는 중...</div>
-                ) : submissions.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    아직 제출한 과제가 없습니다.
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {submissions.map((submission) => (
-                      <div key={submission.id} className="border rounded-lg overflow-hidden">
-                        <div className="flex items-center justify-between p-4 bg-muted/30">
-                          <div className="flex items-center gap-3">
-                            <Badge className={getHomeworkTypeColor(submission.homework_type)}>
-                              {getHomeworkTypeLabel(submission.homework_type)}
-                            </Badge>
-                            <div>
-                              {submission.title && (
-                                <div className="font-medium">{submission.title}</div>
-                              )}
-                              <div className="text-sm text-muted-foreground">
-                                {new Date(submission.submitted_at).toLocaleDateString()} {new Date(submission.submitted_at).toLocaleTimeString()}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Award className="h-4 w-4 text-yellow-500" />
-                            <span className="font-semibold text-yellow-600">
-                              {submission.points}점
-                            </span>
-                          </div>
-                        </div>
-                        {(submission.content || submission.photo) && (
-                          <div className="p-4 space-y-3">
-                            {submission.content && (
-                              <div>
-                                <h4 className="text-sm font-medium text-muted-foreground mb-2">내용</h4>
-                                <p className="text-sm leading-relaxed whitespace-pre-wrap">{submission.content}</p>
-                              </div>
-                            )}
-                            {submission.photo && (
-                              <div>
-                                <h4 className="text-sm font-medium text-muted-foreground mb-2">첨부 사진</h4>
-                                <img 
-                                  src={submission.photo} 
-                                  alt="과제 사진" 
-                                  className="max-w-full h-auto rounded border max-h-64 object-contain"
-                                />
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+  {submissionsLoading ? (
+    <div className="text-center py-8">과제를 불러오는 중...</div>
+  ) : submissions.length === 0 ? (
+    <div className="text-center py-8 text-muted-foreground">
+      아직 제출한 과제가 없습니다.
+    </div>
+  ) : (
+    <div className="space-y-4">
+      {submissions.map((submission) => (
+        <div key={submission.id} className="border rounded-lg overflow-hidden">
+          <div className="flex items-center justify-between p-4 bg-muted/30">
+            <div className="flex items-center gap-3">
+              <Badge className={getHomeworkTypeColor(submission.homework_type)}>
+                {getHomeworkTypeLabel(submission.homework_type)}
+              </Badge>
+              <div>
+                {submission.title && (
+                  <div className="font-medium">{submission.title}</div>
                 )}
-              </CardContent>
+                <div className="text-sm text-muted-foreground">
+                  {new Date(submission.submitted_at).toLocaleDateString()} {new Date(submission.submitted_at).toLocaleTimeString()}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Award className="h-4 w-4 text-yellow-500" />
+              <span className="font-semibold text-yellow-600">
+                {submission.points}점
+              </span>
+              {/* 👇 삭제 버튼 추가 */}
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={async () => {
+                  if (!window.confirm("정말로 이 과제를 삭제할까요?")) return;
+                  // 삭제 처리
+                  const { error } = await supabase
+                    .from('homework_submissions')
+                    .delete()
+                    .eq('id', submission.id);
+                  if (error) {
+                    alert("삭제 실패: " + error.message);
+                    return;
+                  }
+                  // 삭제 후 새로고침
+                  setSubmissions((prev) => prev.filter((hw) => hw.id !== submission.id));
+                }}
+              >
+                삭제
+              </Button>
+            </div>
+          </div>
+          {(submission.content || submission.photo) && (
+            <div className="p-4 space-y-3">
+              {submission.content && (
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-2">내용</h4>
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{submission.content}</p>
+                </div>
+              )}
+              {submission.photo && (
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-2">첨부 사진</h4>
+                  <img 
+                    src={submission.photo} 
+                    alt="과제 사진" 
+                    className="max-w-full h-auto rounded border max-h-64 object-contain"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  )}
+</CardContent>
             </Card>
           </>
         ) : (
