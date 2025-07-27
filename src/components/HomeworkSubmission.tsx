@@ -49,12 +49,15 @@ const HomeworkSubmission = ({ student, studentProfile, studentAuth, onSubmission
   const [todaySubmissions, setTodaySubmissions] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (studentAuth?.name || (currentStudent && 'id' in currentStudent)) {
-      fetchHomeworks();
-      checkTodaySubmissions();
-    }
-  }, [studentAuth?.name, currentStudent]);
+useEffect(() => {
+  if (studentAuth?.name || (currentStudent && 'id' in currentStudent)) {
+    fetchHomeworks();
+    checkTodaySubmissions();
+  }
+}, [
+  studentAuth?.name,
+  currentStudent && 'id' in currentStudent ? currentStudent.id : null
+]);
 
   const fetchHomeworks = async () => {
     // For sessionStorage-based auth, we don't fetch from database
