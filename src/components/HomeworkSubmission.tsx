@@ -270,7 +270,7 @@ const { data, error } = await supabase
         };
 
         // Update local state
-        setHomeworks([newHomework, ...homeworks]);
+        await fetchHomeworks();
         setTitle("");
         setContent("");
         setPhoto("");
