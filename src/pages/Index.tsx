@@ -70,12 +70,13 @@ const Index = () => {
           // Try to fetch existing classroom for teacher
           try {
             console.log("Fetching classroom for teacher email:", session.user.email);
+console.log("[쿼리 전] teacher_email 조건:", (session.user.email ?? "").trim().toLowerCase());
 const { data: existingClassroom, error: classroomError } = await supabase
   .from('classrooms')
   .select('*')
   .eq('teacher_email', (session.user.email ?? "").trim().toLowerCase())
   .maybeSingle();
-             console.log("[기존 세션 쿼리 결과]", existingClassroom, classroomError);
+console.log("[쿼리 결과]", existingClassroom, classroomError);
 
 if (existingClassroom && !classroomError) {
   setClassroom(existingClassroom);
