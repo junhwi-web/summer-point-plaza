@@ -26,6 +26,17 @@ interface HomeworkSubmissionProps {
   onSubmissionUpdate?: () => void;
 }
 
+const dbToUiType = {
+  diary: "diary",
+  book_report: "book-report",
+  free_task: "free-task"
+};
+const uiToDbType = {
+  diary: "diary",
+  "book-report": "book_report",
+  "free-task": "free_task"
+};
+
 const HomeworkSubmission = ({ student, studentProfile, studentAuth, onSubmissionUpdate }: HomeworkSubmissionProps) => {
   // Use studentAuth if available, then studentProfile, fallback to student for backward compatibility
   const currentStudent = studentAuth || studentProfile || student;
