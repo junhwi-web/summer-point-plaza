@@ -77,14 +77,16 @@ const HomeworkSubmission = ({ student, studentProfile, studentAuth, onSubmission
         return;
       }
 
-      const formattedHomeworks: Homework[] = data.map(sub => ({
-        id: sub.id,
-        type: sub.homework_type as "diary" | "book-report" | "free-task",
-        title: `${sub.homework_type} 과제`, // We don't store title separately, using type
-        content: sub.homework_type, // We don't store content separately
-        submittedAt: new Date(sub.submitted_at),
-        points: sub.points
-      }));
+  const formattedHomeworks: Homework[] = data.map(sub => ({
+    id: sub.id,
+    // DB에서 받아온 스네이크케이스를 UI용 케밥케이스로 변환
+    type: dbToUiType[sub.homework_type] as "diary" | "book-report" | "free-task",
+    title: sub.title || `${dbToUiType[sub.homework_type]} 과제`,
+    content: sub.content || "",
+    photo: sub.photo,
+    submittedAt: new Date(sub.submitted_at),
+    points: sub.points
+  }));
 
       setHomeworks(formattedHomeworks);
     } catch (error) {
@@ -123,12 +125,11 @@ const HomeworkSubmission = ({ student, studentProfile, studentAuth, onSubmission
           return;
         }
 
-        const todaySubmissionsMap: Record<string, boolean> = {};
-        data.forEach(sub => {
-          todaySubmissionsMap[sub.homework_type] = true;
-        });
-        
-        setTodaySubmissions(todaySubmissionsMap);
+    const todaySubmissionsMap: Record<string, boolean> = {};
+    data.forEach(sub => {
+      todaySubmissionsMap[dbToUiType[sub.homework_type]] = true;
+    });
+    setTodaySubmissions(todaySubmissionsMap);
       } catch (error) {
         console.error('Error checking today submissions:', error);
       }
@@ -152,12 +153,11 @@ const HomeworkSubmission = ({ student, studentProfile, studentAuth, onSubmission
         return;
       }
 
-      const todaySubmissionsMap: Record<string, boolean> = {};
-      data.forEach(sub => {
-        todaySubmissionsMap[sub.homework_type] = true;
-      });
-      
-      setTodaySubmissions(todaySubmissionsMap);
+    const todaySubmissionsMap: Record<string, boolean> = {};
+    data.forEach(sub => {
+      todaySubmissionsMap[dbToUiType[sub.homework_type]] = true;
+    });
+    setTodaySubmissions(todaySubmissionsMap);
     } catch (error) {
       console.error('Error checking today submissions:', error);
     }
@@ -231,19 +231,19 @@ const HomeworkSubmission = ({ student, studentProfile, studentAuth, onSubmission
         }
 
         // Save homework to database
-        const { data, error } = await supabase
-          .from('homework_submissions')
-          .insert({
-            student_id: studentData.id,
-            homework_type: activeTab,
-            points: homeworkTypes[activeTab].points,
-            title: title.trim(),
-            content: content.trim(),
-            photo: photo
-            // user_id 필드 제거 - 409 에러 원인일 수 있음
-          })
-          .select()
-          .single();
+const { data, error } = await supabase
+  .from('homework_submissions')
+  .insert({
+    student_id: studentData.id,
+    // UI 타입(activeTab)을 DB 타입으로 변환해서 저장!
+    homework_type: uiToDbType[activeTab],
+    points: homeworkTypes[activeTab].points,
+    title: title.trim(),
+    content: content.trim(),
+    photo: photo
+  })
+  .select()
+  .single();
 
         if (error) {
           console.error('Error submitting homework:', error);
@@ -287,18 +287,19 @@ const HomeworkSubmission = ({ student, studentProfile, studentAuth, onSubmission
       }
 
       // For database-based auth
-      const { data, error } = await supabase
-        .from('homework_submissions')
-        .insert({
-          student_id: (currentStudent as any).id,
-          homework_type: activeTab,
-          points: homeworkTypes[activeTab].points,
-          title: title.trim(),
-          content: content.trim(),
-          photo: photo
-        })
-        .select()
-        .single();
+const { data, error } = await supabase
+  .from('homework_submissions')
+  .insert({
+    student_id: studentData.id,
+    // UI 타입(activeTab)을 DB 타입으로 변환해서 저장!
+    homework_type: uiToDbType[activeTab],
+    points: homeworkTypes[activeTab].points,
+    title: title.trim(),
+    content: content.trim(),
+    photo: photo
+  })
+  .select()
+  .single();
 
       if (error) {
         console.error('Error submitting homework:', error);
@@ -349,9 +350,9 @@ const HomeworkSubmission = ({ student, studentProfile, studentAuth, onSubmission
     }
   };
 
-  const getSubmissionCount = (type: string) => {
-    return homeworks.filter(hw => hw.type === type).length;
-  };
+const getSubmissionCount = (type: string) => {
+  return homeworks.filter(hw => hw.type === type).length;
+};
 
   const getTotalPoints = () => {
     return homeworks.reduce((total, hw) => total + hw.points, 0);
