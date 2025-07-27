@@ -34,6 +34,12 @@ interface HomeworkListProps {
   onUpdate?: () => void;
 }
 
+const dbToUiType = {
+  diary: "diary",
+  book_report: "book-report",
+  free_task: "free-task"
+};
+
 const HomeworkList = ({ student, studentProfile, studentAuth, onUpdate }: HomeworkListProps) => {
   // Use studentAuth if available, then studentProfile, fallback to student for backward compatibility
   const currentStudent = studentAuth || studentProfile || student;
@@ -86,15 +92,16 @@ const HomeworkList = ({ student, studentProfile, studentAuth, onUpdate }: Homewo
           return;
         }
 
-        const formattedHomeworks: Homework[] = data.map(sub => ({
-          id: sub.id,
-          type: sub.homework_type as "diary" | "book-report" | "free-task",
-          title: sub.title || `${homeworkTypes[sub.homework_type as keyof typeof homeworkTypes]?.label || '과제'}`,
-          content: sub.content || '',
-          photo: sub.photo || '',
-          submittedAt: new Date(sub.submitted_at),
-          points: sub.points
-        }));
+const formattedHomeworks: Homework[] = data.map(sub => ({
+  id: sub.id,
+  // dbToUiType으로 변환!
+  type: dbToUiType[sub.homework_type] as "diary" | "book-report" | "free-task",
+  title: sub.title || `${homeworkTypes[dbToUiType[sub.homework_type] as keyof typeof homeworkTypes]?.label || '과제'}`,
+  content: sub.content || '',
+  photo: sub.photo || '',
+  submittedAt: new Date(sub.submitted_at),
+  points: sub.points
+}));
 
         setHomeworks(formattedHomeworks);
         setLoading(false);
@@ -118,15 +125,16 @@ const HomeworkList = ({ student, studentProfile, studentAuth, onUpdate }: Homewo
         return;
       }
 
-      const formattedHomeworks: Homework[] = data.map(sub => ({
-        id: sub.id,
-        type: sub.homework_type as "diary" | "book-report" | "free-task",
-        title: sub.title || `${homeworkTypes[sub.homework_type as keyof typeof homeworkTypes]?.label || '과제'}`,
-        content: sub.content || '',
-        photo: sub.photo || '',
-        submittedAt: new Date(sub.submitted_at),
-        points: sub.points
-      }));
+const formattedHomeworks: Homework[] = data.map(sub => ({
+  id: sub.id,
+  // dbToUiType으로 변환!
+  type: dbToUiType[sub.homework_type] as "diary" | "book-report" | "free-task",
+  title: sub.title || `${homeworkTypes[dbToUiType[sub.homework_type] as keyof typeof homeworkTypes]?.label || '과제'}`,
+  content: sub.content || '',
+  photo: sub.photo || '',
+  submittedAt: new Date(sub.submitted_at),
+  points: sub.points
+}));
 
       setHomeworks(formattedHomeworks);
     } catch (error) {
