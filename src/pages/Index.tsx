@@ -75,16 +75,14 @@ const { data: existingClassroom, error: classroomError } = await supabase
   .select('*')
   .eq('teacher_email', (session.user.email ?? "").trim())
   .maybeSingle();
-              
-            console.log("Query result:", { existingClassroom, classroomError });
-              
-            if (existingClassroom && !classroomError) {
-              console.log("Found existing classroom:", existingClassroom);
-              setClassroom(existingClassroom);
-            } else {
-              console.log("No classroom found for teacher, error:", classroomError);
-              setClassroom(null);
-            }
+
+console.log("Query result:", { existingClassroom, classroomError });
+
+if (existingClassroom && !Array.isArray(existingClassroom) && !classroomError) {
+  setClassroom(existingClassroom);
+} else {
+  setClassroom(null);
+}
           } catch (error) {
             console.error("Error fetching classroom:", error);
             setClassroom(null);
@@ -112,16 +110,14 @@ const { data: existingClassroom, error: classroomError } = await supabase
   .select('*')
   .eq('teacher_email', (session.user.email ?? "").trim())
   .maybeSingle();
-              
-            console.log("Existing session classroom result:", { existingClassroom, classroomError });
-              
-            if (existingClassroom && !classroomError) {
-              console.log("Setting classroom from existing session:", existingClassroom);
-              setClassroom(existingClassroom);
-            } else {
-              console.log("No classroom found for existing session");
-              setClassroom(null);
-            }
+
+console.log("Query result:", { existingClassroom, classroomError });
+
+if (existingClassroom && !Array.isArray(existingClassroom) && !classroomError) {
+  setClassroom(existingClassroom);
+} else {
+  setClassroom(null);
+}
           } catch (error) {
             console.error("Error fetching classroom for existing session:", error);
             setClassroom(null);
@@ -341,22 +337,24 @@ const { data: existingClassroom, error: classroomError } = await supabase
                       const finalCode = customCode.trim().toUpperCase() || Array(5).fill(0).map(() => String.fromCharCode(65 + Math.floor(Math.random() * 26))).join('');
                       
                       // Check if custom code already exists
-                      if (customCode.trim()) {
-                        const { data: existingClassroom } = await supabase
-                          .from('classrooms')
-                          .select('id')
-                          .eq('code', finalCode)
-                          .maybeSingle();
-                          
-                        if (existingClassroom) {
-                          toast({
-                            title: "오류 발생",
-                            description: "이미 사용 중인 학급 코드입니다. 다른 코드를 입력해주세요.",
-                            variant: "destructive",
-                          });
-                          return;
-                        }
-                      }
+if (customCode.trim()) {
+  const finalCode = customCode.trim().toUpperCase();
+
+  const { data: existingClassroom } = await supabase
+    .from('classrooms')
+    .select('id')
+    .eq('code', finalCode)
+    .maybeSingle();
+
+  if (existingClassroom) {
+    toast({
+      title: "오류 발생",
+      description: "이미 사용 중인 학급 코드입니다. 다른 코드를 입력해주세요.",
+      variant: "destructive",
+    });
+    return;
+  }
+}
                       
                       console.log("Final class code:", finalCode);
 
