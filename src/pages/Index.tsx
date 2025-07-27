@@ -75,6 +75,7 @@ const { data: existingClassroom, error: classroomError } = await supabase
   .select('*')
   .eq('teacher_email', (session.user.email ?? "").trim().toLowerCase())
   .maybeSingle();
+             console.log("[기존 세션 쿼리 결과]", existingClassroom, classroomError);
 
 if (existingClassroom && !classroomError) {
   setClassroom(existingClassroom);
@@ -341,6 +342,7 @@ if (customCode.trim()) {
     .select('id')
     .eq('code', finalCode)
     .maybeSingle();
+   console.log("[기존 세션 쿼리 결과]", existingClassroom, classroomError);
 
   if (existingClassroom) {
     toast({
