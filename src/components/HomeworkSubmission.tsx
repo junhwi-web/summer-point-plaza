@@ -59,30 +59,40 @@ useEffect(() => {
   currentStudent && 'id' in currentStudent ? currentStudent.id : null
 ]);
 
-  const fetchHomeworks = async () => {
-    // For sessionStorage-based auth, we don't fetch from database
-    if (studentAuth) {
-      setHomeworks([]);
-      return;
-    }
-    
-    if (!currentStudent || !('id' in currentStudent)) return;
+const fetchHomeworks = async () => {
+  // 항상 sessionStorage에서 studentAuth 꺼내기
+  const studentAuthRaw = sessionStorage.getItem('studentAuth');
+  const studentAuth = studentAuthRaw ? JSON.parse(studentAuthRaw) : null;
 
-    try {
-      const { data, error } = await supabase
-        .from('homework_submissions')
-        .select('*')
-        .eq('student_id', currentStudent.id)
-        .order('submitted_at', { ascending: false });
+  if (!studentAuth?.name || !studentAuth?.classroomId) return;
 
-      if (error) {
-        console.error('Error fetching homeworks:', error);
-        return;
-      }
+  // 1. DB에서 student ID 찾기
+  const { data: studentData, error: studentError } = await supabase
+    .from('students')
+    .select('id')
+    .eq('name', studentAuth.name)
+    .eq('classroom_id', studentAuth.classroomId)
+    .maybeSingle();
+
+  if (studentError || !studentData) {
+    setHomeworks([]);
+    return;
+  }
+
+  // 2. 해당 student_id로 homework 불러오기
+  const { data, error } = await supabase
+    .from('homework_submissions')
+    .select('*')
+    .eq('student_id', studentData.id)
+    .order('submitted_at', { ascending: false });
+
+  if (error) {
+    setHomeworks([]);
+    return;
+  }
 
   const formattedHomeworks: Homework[] = data.map(sub => ({
     id: sub.id,
-    // DB에서 받아온 스네이크케이스를 UI용 케밥케이스로 변환
     type: dbToUiType[sub.homework_type] as "diary" | "book-report" | "free-task",
     title: sub.title || `${dbToUiType[sub.homework_type]} 과제`,
     content: sub.content || "",
@@ -91,11 +101,8 @@ useEffect(() => {
     points: sub.points
   }));
 
-      setHomeworks(formattedHomeworks);
-    } catch (error) {
-      console.error('Error fetching homeworks:', error);
-    }
-  };
+  setHomeworks(formattedHomeworks);
+};
 
   const checkTodaySubmissions = async () => {
     // For sessionStorage-based auth, check database for today's submissions
