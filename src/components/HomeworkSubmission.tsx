@@ -173,183 +173,101 @@ useEffect(() => {
   };
 
   const submitHomework = async () => {
-    if (!title.trim() || !content.trim()) {
-      toast({
-        title: "오류",
-        description: "제목과 내용을 모두 입력해주세요.",
-        variant: "destructive"
-      });
-      return;
-    }
+  // 1. 항상 sessionStorage에서 studentAuth 꺼내기 (useEffect로 한번만 꺼내도 되지만, 매번 안전하게)
+  const studentAuthRaw = sessionStorage.getItem('studentAuth');
+  const studentAuth = studentAuthRaw ? JSON.parse(studentAuthRaw) : null;
+  const studentId = studentAuth?.studentId;
 
-    // 사진이 필수인 과제만 사진 검증
-    if (homeworkTypes[activeTab].photoRequired && !photo.trim()) {
-      toast({
-        title: "오류",
-        description: "과제 사진을 첨부해주세요.",
-        variant: "destructive"
-      });
-      return;
-    }
+  if (!studentId) {
+    toast({
+      title: "학생 정보 오류",
+      description: "학생 ID를 찾을 수 없습니다.",
+      variant: "destructive"
+    });
+    return;
+  }
 
-    if (!currentStudent?.name && !studentAuth?.name) {
-      toast({
-        title: "오류",
-        description: "학생 정보를 찾을 수 없습니다.",
-        variant: "destructive"
-      });
-      return;
-    }
+  if (!title.trim() || !content.trim()) {
+    toast({
+      title: "오류",
+      description: "제목과 내용을 모두 입력해주세요.",
+      variant: "destructive"
+    });
+    return;
+  }
 
-    // 하루에 각 과제 유형당 1편만 제출 가능
-    if (todaySubmissions[activeTab]) {
-      toast({
-        title: "제출 제한",
-        description: `${homeworkTypes[activeTab].label}은 하루에 1편만 제출할 수 있습니다. 내일 다시 시도해주세요.`,
-        variant: "destructive"
-      });
-      return;
-    }
+  if (homeworkTypes[activeTab].photoRequired && !photo.trim()) {
+    toast({
+      title: "오류",
+      description: "과제 사진을 첨부해주세요.",
+      variant: "destructive"
+    });
+    return;
+  }
 
-    setSubmitting(true);
+  // 하루에 각 과제 유형당 1편만 제출 가능
+  if (todaySubmissions[activeTab]) {
+    toast({
+      title: "제출 제한",
+      description: `${homeworkTypes[activeTab].label}은 하루에 1편만 제출할 수 있습니다. 내일 다시 시도해주세요.`,
+      variant: "destructive"
+    });
+    return;
+  }
 
-    try {
-      // For sessionStorage-based auth, save to database instead of localStorage
-      if (studentAuth) {
-        // Find student in students table first
-        const { data: studentData, error: studentError } = await supabase
-          .from('students')
-          .select('*')
-          .eq('name', studentAuth.name)
-          .eq('classroom_id', studentAuth.classroomId)
-          .single();
+  setSubmitting(true);
 
-        if (studentError || !studentData) {
-          toast({
-            title: "학생 정보 오류",
-            description: "학생 정보를 찾을 수 없습니다. 다시 로그인해주세요.",
-            variant: "destructive"
-          });
-          return;
-        }
-
-        // Save homework to database
-const { data, error } = await supabase
-  .from('homework_submissions')
-  .insert({
-    student_id: (currentStudent as any).id, // 여기 studentData 아님!
-    homework_type: uiToDbType[activeTab],
-    points: homeworkTypes[activeTab].points,
-    title: title.trim(),
-    content: content.trim(),
-    photo: photo
-  })
-  .select()
-  .single();
-
-        if (error) {
-          console.error('Error submitting homework:', error);
-          console.error('Error details:', JSON.stringify(error, null, 2));
-          toast({
-            title: "제출 실패",
-            description: `과제 제출 중 오류가 발생했습니다: ${error.message}`,
-            variant: "destructive"
-          });
-          return;
-        }
-
-        // Also save to localStorage for backwards compatibility
-        const newHomework: Homework = {
-          id: data.id,
-          type: activeTab,
-          title: title.trim(),
-          content: content.trim(),
-          photo: photo,
-          submittedAt: new Date(data.submitted_at),
-          points: data.points
-        };
-
-        // Update local state
-        await fetchHomeworks();
-        setTitle("");
-        setContent("");
-        setPhoto("");
-
-        toast({
-          title: "과제 제출 완료!",
-          description: `${homeworkTypes[activeTab].points}포인트를 획득했습니다!`,
-          variant: "default"
-        });
-
-        // Update today submissions state
-        setTodaySubmissions(prev => ({ ...prev, [activeTab]: true }));
-
-        onSubmissionUpdate?.();
-        return;
-      }
-
-      // For database-based auth
-const { data, error } = await supabase
-  .from('homework_submissions')
-  .insert({
-    student_id: (currentStudent as any).id, // 여기 studentData 아님!
-    homework_type: uiToDbType[activeTab],
-    points: homeworkTypes[activeTab].points,
-    title: title.trim(),
-    content: content.trim(),
-    photo: photo
-  })
-  .select()
-  .single();
-
-      if (error) {
-        console.error('Error submitting homework:', error);
-        toast({
-          title: "제출 실패",
-          description: "과제 제출 중 오류가 발생했습니다.",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Update local state
-      const newHomework: Homework = {
-        id: data.id,
-        type: activeTab,
+  try {
+    // **과제 제출 (항상 studentId만 사용)**
+    const { data, error } = await supabase
+      .from('homework_submissions')
+      .insert({
+        student_id: studentId, // ★ 반드시 studentAuth.studentId만 사용
+        homework_type: uiToDbType[activeTab],
+        points: homeworkTypes[activeTab].points,
         title: title.trim(),
         content: content.trim(),
-        photo: photo,
-        submittedAt: new Date(data.submitted_at),
-        points: data.points
-      };
+        photo: photo
+      })
+      .select()
+      .single();
 
-      setHomeworks([newHomework, ...homeworks]);
-      setTitle("");
-      setContent("");
-      setPhoto("");
-
-      toast({
-        title: "과제 제출 완료!",
-        description: `${homeworkTypes[activeTab].points}포인트를 획득했습니다!`,
-        variant: "default"
-      });
-
-      // Update today submissions state
-      setTodaySubmissions(prev => ({ ...prev, [activeTab]: true }));
-
-      // Notify parent component
-      onSubmissionUpdate?.();
-    } catch (error) {
+    if (error) {
       console.error('Error submitting homework:', error);
       toast({
         title: "제출 실패",
         description: "과제 제출 중 오류가 발생했습니다.",
         variant: "destructive"
       });
-    } finally {
-      setSubmitting(false);
+      return;
     }
-  };
+
+    // 최신 데이터로 갱신 (fetchHomeworks)
+    await fetchHomeworks();
+    setTitle("");
+    setContent("");
+    setPhoto("");
+
+    toast({
+      title: "과제 제출 완료!",
+      description: `${homeworkTypes[activeTab].points}포인트를 획득했습니다!`,
+      variant: "default"
+    });
+
+    setTodaySubmissions(prev => ({ ...prev, [activeTab]: true }));
+    onSubmissionUpdate?.();
+
+  } catch (error) {
+    console.error('Error submitting homework:', error);
+    toast({
+      title: "제출 실패",
+      description: "과제 제출 중 오류가 발생했습니다.",
+      variant: "destructive"
+    });
+  } finally {
+    setSubmitting(false);
+  }
+};
 
 const getSubmissionCount = (type: string) => {
   return homeworks.filter(hw => hw.type === type).length;
