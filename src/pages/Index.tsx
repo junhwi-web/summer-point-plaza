@@ -70,11 +70,11 @@ const Index = () => {
           // Try to fetch existing classroom for teacher
           try {
             console.log("Fetching classroom for teacher email:", session.user.email);
-            const { data: existingClassroom, error: classroomError } = await supabase
-              .from('classrooms')
-              .select('*')
-              .eq('teacher_email', session.user.email)
-              .maybeSingle();
+const { data: existingClassroom, error: classroomError } = await supabase
+  .from('classrooms')
+  .select('*')
+  .eq('teacher_email', (session.user.email ?? "").trim())
+  .maybeSingle();
               
             console.log("Query result:", { existingClassroom, classroomError });
               
@@ -107,11 +107,11 @@ const Index = () => {
           // Fetch classroom for existing session
           try {
             console.log("Fetching classroom for existing session:", session.user.email);
-            const { data: existingClassroom, error: classroomError } = await supabase
-              .from('classrooms')
-              .select('*')
-              .eq('teacher_email', session.user.email)
-              .maybeSingle();
+const { data: existingClassroom, error: classroomError } = await supabase
+  .from('classrooms')
+  .select('*')
+  .eq('teacher_email', (session.user.email ?? "").trim())
+  .maybeSingle();
               
             console.log("Existing session classroom result:", { existingClassroom, classroomError });
               

@@ -46,13 +46,13 @@ const handleTeacherAuth = async (e: React.FormEvent) => {
           String.fromCharCode(65 + Math.floor(Math.random() * 26))
         ).join('');
 
-        const { error: classError } = await supabase
-          .from('classrooms')
-          .insert({
-            name: classroomName,
-            code: classCode,
-            teacher_email: teacherEmail
-          });
+    const { error: classError } = await supabase
+      .from('classrooms')
+      .insert({
+        name: classroomName,
+        code: classCode,
+        teacher_email: teacherEmail.trim()
+      });
 
       if (classError) throw classError;
 
