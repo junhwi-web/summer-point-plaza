@@ -73,12 +73,10 @@ const Index = () => {
 const { data: existingClassroom, error: classroomError } = await supabase
   .from('classrooms')
   .select('*')
-  .eq('teacher_email', (session.user.email ?? "").trim())
+  .eq('teacher_email', (session.user.email ?? "").trim().toLowerCase())
   .maybeSingle();
 
-console.log("Query result:", { existingClassroom, classroomError });
-
-if (existingClassroom && !Array.isArray(existingClassroom) && !classroomError) {
+if (existingClassroom && !classroomError) {
   setClassroom(existingClassroom);
 } else {
   setClassroom(null);
@@ -108,12 +106,10 @@ if (existingClassroom && !Array.isArray(existingClassroom) && !classroomError) {
 const { data: existingClassroom, error: classroomError } = await supabase
   .from('classrooms')
   .select('*')
-  .eq('teacher_email', (session.user.email ?? "").trim())
+  .eq('teacher_email', (session.user.email ?? "").trim().toLowerCase())
   .maybeSingle();
 
-console.log("Query result:", { existingClassroom, classroomError });
-
-if (existingClassroom && !Array.isArray(existingClassroom) && !classroomError) {
+if (existingClassroom && !classroomError) {
   setClassroom(existingClassroom);
 } else {
   setClassroom(null);
