@@ -72,11 +72,10 @@ const Index = () => {
             console.log("Fetching classroom for teacher email:", session.user.email);
 const { data: existingClassroom, error: classroomError } = await supabase
   .from('classrooms')
-  .select('id')
-  .eq('code', finalCode)
+  .select('*')
+  .eq('teacher_email', (session.user.email ?? "").trim().toLowerCase())
   .maybeSingle();
-
-console.log("[기존 세션 쿼리 결과]", existingClassroom, classroomError);
+             console.log("[기존 세션 쿼리 결과]", existingClassroom, classroomError);
 
 if (existingClassroom && !classroomError) {
   setClassroom(existingClassroom);
