@@ -55,6 +55,8 @@ const Index = () => {
       }
     } catch (error) {
       console.error("fetchClassroom 함수 에러:", error);
+      console.error("에러 상세:", error instanceof Error ? error.message : String(error));
+      console.error("에러 스택:", error instanceof Error ? error.stack : 'No stack available');
       setClassroom(null);
     }
   };
