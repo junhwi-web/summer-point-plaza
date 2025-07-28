@@ -70,13 +70,13 @@ const Index = () => {
           // Try to fetch existing classroom for teacher
           try {
             console.log("Fetching classroom for teacher email:", session.user.email);
-console.log("[쿼리 전] teacher_email 조건:", (session.user.email ?? "").trim().toLowerCase());
-const { data: existingClassroom, error: classroomError } = await supabase
-  .from('classrooms')
-  .select('*')
-  .eq('teacher_email', (session.user.email ?? "").trim().toLowerCase())
-  .maybeSingle();
-console.log("[쿼리 결과]", existingClassroom, classroomError);
+            console.log("[쿼리 전] teacher_email 조건:", (session.user.email ?? "").trim().toLowerCase());
+            const { data: existingClassroom, error: classroomError } = await supabase
+              .from('classrooms')
+              .select('*')
+              .eq('teacher_email', (session.user.email ?? "").trim().toLowerCase())
+              .maybeSingle();
+            console.log("[쿼리 결과]", existingClassroom, classroomError);
 
 if (existingClassroom && !classroomError) {
   setClassroom(existingClassroom);
@@ -105,11 +105,11 @@ if (existingClassroom && !classroomError) {
           // Fetch classroom for existing session
           try {
             console.log("Fetching classroom for existing session:", session.user.email);
-const { data: existingClassroom, error: classroomError } = await supabase
-  .from('classrooms')
-  .select('*')
-  .eq('teacher_email', (session.user.email ?? "").trim().toLowerCase())
-  .maybeSingle();
+            const { data: existingClassroom, error: classroomError } = await supabase
+              .from('classrooms')
+              .select('*')
+              .eq('teacher_email', (session.user.email ?? "").trim().toLowerCase())
+              .maybeSingle();
 
 if (existingClassroom && !classroomError) {
   setClassroom(existingClassroom);
@@ -248,15 +248,17 @@ if (existingClassroom && !classroomError) {
                   </p>
                 )}
               </div>
-              <Button 
-                variant="secondary" 
-                size="sm" 
-                onClick={handleLogout}
-                className="flex items-center gap-1 flex-shrink-0 px-2 py-1"
-              >
-                <LogOut className="h-3 w-3" />
-                <span className="hidden sm:inline text-xs">로그아웃</span>
-              </Button>
+              {user && (
+                <Button 
+                  variant="secondary" 
+                  size="sm" 
+                  onClick={handleLogout}
+                  className="flex items-center gap-1 flex-shrink-0 px-2 py-1"
+                >
+                  <LogOut className="h-3 w-3" />
+                  <span className="hidden sm:inline text-xs">로그아웃</span>
+                </Button>
+              )}
             </div>
           </div>
         </div>

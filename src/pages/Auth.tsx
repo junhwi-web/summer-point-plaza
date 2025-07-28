@@ -207,12 +207,12 @@ const response = await fetch(`https://rcombszhlvafzpkfhooe.supabase.co/rest/v1/c
                   </div>
                   <div>
                     <Label htmlFor="studentName">이름</Label>
-                    <Input
+                     <Input
                       id="studentName"
                       type="text"
                       placeholder="이름을 입력하세요"
                       value={studentName}
-                      onChange={(e) => setStudentName(e.target.value)}
+                      onChange={(e) => setStudentName(e.target.value.trim())}
                       required
                     />
                   </div>
