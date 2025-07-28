@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import VacationInfo from "@/components/VacationInfo";
@@ -24,6 +25,39 @@ const Index = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const fetchClassroom = async (email: string) => {
+    try {
+      console.log("fetchClassroom 함수 시작 - 이메일:", email);
+      const cleanEmail = email.trim().toLowerCase();
+      console.log("정리된 이메일:", cleanEmail);
+      
+      const { data: existingClassroom, error: classroomError } = await supabase
+        .from('classrooms')
+        .select('*')
+        .eq('teacher_email', cleanEmail)
+        .maybeSingle();
+      
+      console.log("classroom 쿼리 결과:", { existingClassroom, classroomError });
+      
+      if (classroomError) {
+        console.error("Classroom 쿼리 에러:", classroomError);
+        setClassroom(null);
+        return;
+      }
+      
+      if (existingClassroom) {
+        console.log("기존 classroom 발견:", existingClassroom);
+        setClassroom(existingClassroom);
+      } else {
+        console.log("기존 classroom 없음 - 새로 생성 필요");
+        setClassroom(null);
+      }
+    } catch (error) {
+      console.error("fetchClassroom 함수 에러:", error);
+      setClassroom(null);
+    }
+  };
 
   useEffect(() => {
     // Check for student sessionStorage auth first
@@ -62,31 +96,13 @@ const Index = () => {
         setSession(session);
         setUser(session?.user ?? null);
         
-        if (session?.user) {
+        if (session?.user?.email) {
           // This is a teacher (students use sessionStorage)
           console.log("This is a teacher, looking for classroom");
           setStudentAuth(null);
           
-          // Try to fetch existing classroom for teacher
-          try {
-            console.log("Fetching classroom for teacher email:", session.user.email);
-            console.log("[쿼리 전] teacher_email 조건:", (session.user.email ?? "").trim().toLowerCase());
-            const { data: existingClassroom, error: classroomError } = await supabase
-              .from('classrooms')
-              .select('*')
-              .eq('teacher_email', (session.user.email ?? "").trim().toLowerCase())
-              .maybeSingle();
-            console.log("[쿼리 결과]", existingClassroom, classroomError);
-
-if (existingClassroom && !classroomError) {
-  setClassroom(existingClassroom);
-} else {
-  setClassroom(null);
-}
-          } catch (error) {
-            console.error("Error fetching classroom:", error);
-            setClassroom(null);
-          }
+          // Fetch classroom for teacher
+          await fetchClassroom(session.user.email);
         } else {
           setClassroom(null);
           setStudentAuth(null);
@@ -97,29 +113,14 @@ if (existingClassroom && !classroomError) {
     // Check for existing session (teachers only)
     if (!studentAuthData) {
       supabase.auth.getSession().then(async ({ data: { session } }) => {
-        if (session) {
+        console.log("기존 세션 확인:", session?.user?.email);
+        if (session?.user?.email) {
           console.log("Found existing session for:", session.user.email);
           setSession(session);
           setUser(session?.user ?? null);
           
           // Fetch classroom for existing session
-          try {
-            console.log("Fetching classroom for existing session:", session.user.email);
-            const { data: existingClassroom, error: classroomError } = await supabase
-              .from('classrooms')
-              .select('*')
-              .eq('teacher_email', (session.user.email ?? "").trim().toLowerCase())
-              .maybeSingle();
-
-if (existingClassroom && !classroomError) {
-  setClassroom(existingClassroom);
-} else {
-  setClassroom(null);
-}
-          } catch (error) {
-            console.error("Error fetching classroom for existing session:", error);
-            setClassroom(null);
-          }
+          await fetchClassroom(session.user.email);
         }
       });
 
@@ -337,26 +338,26 @@ if (existingClassroom && !classroomError) {
                       const finalCode = customCode.trim().toUpperCase() || Array(5).fill(0).map(() => String.fromCharCode(65 + Math.floor(Math.random() * 26))).join('');
                       
                       // Check if custom code already exists
-if (customCode.trim()) {
-  const finalCode = customCode.trim().toUpperCase();
+                      if (customCode.trim()) {
+                        const finalCode = customCode.trim().toUpperCase();
 
-  const { data: existingClassroom, error: classroomError } = await supabase
-    .from('classrooms')
-    .select('id')
-    .eq('code', finalCode)
-    .maybeSingle();
+                        const { data: existingClassroom, error: classroomError } = await supabase
+                          .from('classrooms')
+                          .select('id')
+                          .eq('code', finalCode)
+                          .maybeSingle();
 
-  console.log("[기존 세션 쿼리 결과]", existingClassroom, classroomError);
+                        console.log("[기존 세션 쿼리 결과]", existingClassroom, classroomError);
 
-  if (existingClassroom) {
-    toast({
-      title: "오류 발생",
-      description: "이미 사용 중인 학급 코드입니다. 다른 코드를 입력해주세요.",
-      variant: "destructive",
-    });
-    return;
-  }
-}
+                        if (existingClassroom) {
+                          toast({
+                            title: "오류 발생",
+                            description: "이미 사용 중인 학급 코드입니다. 다른 코드를 입력해주세요.",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+                      }
                       
                       console.log("Final class code:", finalCode);
 
