@@ -28,49 +28,27 @@ const Index = () => {
 
   const fetchClassroom = async (email: string) => {
     try {
-      console.log("fetchClassroom 함수 시작 - 이메일:", email);
       const cleanEmail = email.trim().toLowerCase();
-      console.log("정리된 이메일:", cleanEmail);
       
-      console.log("Supabase 쿼리 실행 시작...");
-      console.log("Supabase client:", supabase);
+      const { data: existingClassroom, error: classroomError } = await supabase
+        .from('classrooms')
+        .select('*')
+        .eq('teacher_email', cleanEmail)
+        .maybeSingle();
       
-      try {
-        const query = supabase
-          .from('classrooms')
-          .select('*')
-          .eq('teacher_email', cleanEmail);
-        
-        console.log("쿼리 객체 생성 완료");
-        
-        const result = await query.maybeSingle();
-        console.log("Supabase 쿼리 완료");
-        
-        const { data: existingClassroom, error: classroomError } = result;
-        console.log("classroom 쿼리 결과:", { existingClassroom, classroomError });
-        
-        if (classroomError) {
-          console.error("Classroom 쿼리 에러:", classroomError);
-          setClassroom(null);
-          return;
-        }
-        
-        if (existingClassroom) {
-          console.log("기존 classroom 발견:", existingClassroom);
-          setClassroom(existingClassroom);
-        } else {
-          console.log("기존 classroom 없음 - 새로 생성 필요");
-          setClassroom(null);
-        }
-      } catch (queryError) {
-        console.error("쿼리 실행 중 에러:", queryError);
+      if (classroomError) {
+        console.error("Classroom 쿼리 에러:", classroomError);
         setClassroom(null);
         return;
       }
+      
+      if (existingClassroom) {
+        setClassroom(existingClassroom);
+      } else {
+        setClassroom(null);
+      }
     } catch (error) {
       console.error("fetchClassroom 함수 에러:", error);
-      console.error("에러 상세:", error instanceof Error ? error.message : String(error));
-      console.error("에러 스택:", error instanceof Error ? error.stack : 'No stack available');
       setClassroom(null);
     }
   };
@@ -97,11 +75,8 @@ const Index = () => {
     // Only set up Supabase auth listener if no student auth
     // Check for authentication state (teachers only)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log("Auth state change:", event, session?.user?.email);
-        
+      (event, session) => {
         if (event === 'SIGNED_OUT') {
-          console.log("User signed out, clearing state");
           setSession(null);
           setUser(null);
           setClassroom(null);
@@ -113,12 +88,9 @@ const Index = () => {
         setUser(session?.user ?? null);
         
         if (session?.user?.email) {
-          // This is a teacher (students use sessionStorage)
-          console.log("This is a teacher, looking for classroom");
           setStudentAuth(null);
-          
-          // Fetch classroom for teacher
-          await fetchClassroom(session.user.email);
+          // 세션이 있으면 바로 classroom fetch
+          fetchClassroom(session.user.email);
         } else {
           setClassroom(null);
           setStudentAuth(null);
@@ -126,22 +98,7 @@ const Index = () => {
       }
     );
 
-    // Check for existing session (teachers only)
-    if (!studentAuthData) {
-      supabase.auth.getSession().then(async ({ data: { session } }) => {
-        console.log("기존 세션 확인:", session?.user?.email);
-        if (session?.user?.email) {
-          console.log("Found existing session for:", session.user.email);
-          setSession(session);
-          setUser(session?.user ?? null);
-          
-          // Fetch classroom for existing session
-          await fetchClassroom(session.user.email);
-        }
-      });
-
-      return () => subscription?.unsubscribe();
-    }
+    return () => subscription?.unsubscribe();
   }, []);
 
   // Redirect to auth if no user is logged in (and no student auth)
