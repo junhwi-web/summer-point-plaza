@@ -33,27 +33,39 @@ const Index = () => {
       console.log("정리된 이메일:", cleanEmail);
       
       console.log("Supabase 쿼리 실행 시작...");
-      const { data: existingClassroom, error: classroomError } = await supabase
-        .from('classrooms')
-        .select('*')
-        .eq('teacher_email', cleanEmail)
-        .maybeSingle();
+      console.log("Supabase client:", supabase);
       
-      console.log("Supabase 쿼리 완료");
-      console.log("classroom 쿼리 결과:", { existingClassroom, classroomError });
-      
-      if (classroomError) {
-        console.error("Classroom 쿼리 에러:", classroomError);
+      try {
+        const query = supabase
+          .from('classrooms')
+          .select('*')
+          .eq('teacher_email', cleanEmail);
+        
+        console.log("쿼리 객체 생성 완료");
+        
+        const result = await query.maybeSingle();
+        console.log("Supabase 쿼리 완료");
+        
+        const { data: existingClassroom, error: classroomError } = result;
+        console.log("classroom 쿼리 결과:", { existingClassroom, classroomError });
+        
+        if (classroomError) {
+          console.error("Classroom 쿼리 에러:", classroomError);
+          setClassroom(null);
+          return;
+        }
+        
+        if (existingClassroom) {
+          console.log("기존 classroom 발견:", existingClassroom);
+          setClassroom(existingClassroom);
+        } else {
+          console.log("기존 classroom 없음 - 새로 생성 필요");
+          setClassroom(null);
+        }
+      } catch (queryError) {
+        console.error("쿼리 실행 중 에러:", queryError);
         setClassroom(null);
         return;
-      }
-      
-      if (existingClassroom) {
-        console.log("기존 classroom 발견:", existingClassroom);
-        setClassroom(existingClassroom);
-      } else {
-        console.log("기존 classroom 없음 - 새로 생성 필요");
-        setClassroom(null);
       }
     } catch (error) {
       console.error("fetchClassroom 함수 에러:", error);
