@@ -32,12 +32,14 @@ const Index = () => {
       const cleanEmail = email.trim().toLowerCase();
       console.log("정리된 이메일:", cleanEmail);
       
+      console.log("Supabase 쿼리 실행 시작...");
       const { data: existingClassroom, error: classroomError } = await supabase
         .from('classrooms')
         .select('*')
         .eq('teacher_email', cleanEmail)
         .maybeSingle();
       
+      console.log("Supabase 쿼리 완료");
       console.log("classroom 쿼리 결과:", { existingClassroom, classroomError });
       
       if (classroomError) {
